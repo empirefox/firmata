@@ -77,68 +77,76 @@ func testAnalogMappingResponse() []byte {
 		127, 127, 127, 127, 0, 1, 2, 3, 4, 5, 247}
 }
 
-func initTestFirmata() *Firmata {
-	b := NewFirmata()
-	b.connectedCh = make(chan struct{}, 1)
-	b.c = readWriteCloser{}
+func processFrame(f *Firmata) error {
+	frame, err := f.reader.ReadFrame()
+	if err != nil {
+		return err
+	}
+	return f.proccessFrame(frame)
+}
 
-	for _, f := range []func() []byte{
+func startProccessNextFrame(f *Firmata) chan error {
+	errCh := make(chan error)
+	go func() { errCh <- processFrame(f) }()
+	return errCh
+}
+
+func initTestFirmata() (*Firmata, error) {
+	f := NewFirmata(readWriteCloser{})
+
+	for _, fn := range []func() []byte{
 		testProtocolResponse,
 		testFirmwareResponse,
 		testCapabilitiesResponse,
 		testAnalogMappingResponse,
 	} {
-		SetTestReadData(f())
-		b.unmashal()
+		SetTestReadData(fn())
+		frame, err := f.reader.ReadFrame()
+		if err != nil {
+			return nil, err
+		}
+		err = f.proccessFrame(frame)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return b
+	return f, nil
 }
 
 func TestInit(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
+	b, err := initTestFirmata()
+	if err != nil {
+		t.Fatalf("initTestFirmata should ok, but got %v", err)
+	}
 
 	gobottest.Assert(t, b.ProtocolVersion.Server.Name, "v2.3")
 	gobottest.Assert(t, b.FirmwareVersion.Server.Name, "v2.3")
-	gobottest.Assert(t, b.FirmwareName, "StandardFirmata.ino")
-	gobottest.Assert(t, len(b.Pins()), 20)
-	gobottest.Assert(t, len(b.analogPins), 6)
+	gobottest.Assert(t, string(b.FirmwareName), "StandardFirmata.ino")
+	gobottest.Assert(t, len(b.Pins_l), 20)
+	gobottest.Assert(t, len(b.AnalogPins_l), 6)
 }
 
 func TestReportVersion(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
+	b, _ := initTestFirmata()
 	//test if functions executes
 	gobottest.Assert(t, b.reportVersion(), nil)
 }
 
-func TestQueryFirmware(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
-	//test if functions executes
-	gobottest.Assert(t, b.reportFirmware(), nil)
-}
-
-func TestQueryPinState(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
-	//test if functions executes
-	gobottest.Assert(t, b.PinStateQuery(1), nil)
-}
-
 func TestProcessAnalogRead0(t *testing.T) {
-	sem := make(chan bool)
-	b := initTestFirmata()
-	b.connected.Store(true)
+	b, _ := initTestFirmata()
 	SetTestReadData([]byte{0xE0, 0x23, 0x05})
 
+	sem := make(chan bool, 1)
 	b.OnAnalogMessage = func(pin *Pin) {
 		gobottest.Assert(t, pin.Value, 675)
 		sem <- true
 	}
 
-	go b.unmashal()
+	err := processFrame(b)
+	if err != nil {
+		t.Fatalf("processFrame should ok, but got %v", err)
+	}
 
 	select {
 	case <-sem:
@@ -148,17 +156,19 @@ func TestProcessAnalogRead0(t *testing.T) {
 }
 
 func TestProcessAnalogRead1(t *testing.T) {
-	sem := make(chan bool)
-	b := initTestFirmata()
-	b.connected.Store(true)
+	b, _ := initTestFirmata()
 	SetTestReadData([]byte{0xE1, 0x23, 0x06})
 
+	sem := make(chan bool, 1)
 	b.OnAnalogMessage = func(pin *Pin) {
 		gobottest.Assert(t, pin.Value, 803)
 		sem <- true
 	}
 
-	go b.unmashal()
+	err := processFrame(b)
+	if err != nil {
+		t.Fatalf("processFrame should ok, but got %v", err)
+	}
 
 	select {
 	case <-sem:
@@ -168,20 +178,22 @@ func TestProcessAnalogRead1(t *testing.T) {
 }
 
 func TestProcessDigitalRead2(t *testing.T) {
-	sem := make(chan bool)
-	b := initTestFirmata()
-	b.connected.Store(true)
-	b.pins[2].Mode = PIN_MODE_INPUT
+	b, _ := initTestFirmata()
+	b.Pins_l[2].Mode = PIN_MODE_INPUT
 	SetTestReadData([]byte{0x90, 0x04, 0x00})
 
+	sem := make(chan bool, 1)
 	b.OnDigitalMessage = func(pins []*Pin) {
 		gobottest.Assert(t, len(pins), 1)
-		gobottest.Assert(t, pins[0].ID, 2)
+		gobottest.Assert(t, pins[0].ID, byte(2))
 		gobottest.Assert(t, pins[0].Value, 1)
 		sem <- true
 	}
 
-	go b.unmashal()
+	err := processFrame(b)
+	if err != nil {
+		t.Fatalf("processFrame should ok, but got %v", err)
+	}
 
 	select {
 	case <-sem:
@@ -191,20 +203,22 @@ func TestProcessDigitalRead2(t *testing.T) {
 }
 
 func TestProcessDigitalRead4(t *testing.T) {
-	sem := make(chan bool)
-	b := initTestFirmata()
-	b.connected.Store(true)
-	b.pins[4].Mode = PIN_MODE_INPUT
+	b, _ := initTestFirmata()
+	b.Pins_l[4].Mode = PIN_MODE_INPUT
 	SetTestReadData([]byte{0x90, 0x16, 0x00})
 
+	sem := make(chan bool, 1)
 	b.OnDigitalMessage = func(pins []*Pin) {
 		gobottest.Assert(t, len(pins), 1)
-		gobottest.Assert(t, pins[0].ID, 4)
+		gobottest.Assert(t, pins[0].ID, byte(4))
 		gobottest.Assert(t, pins[0].Value, 1)
 		sem <- true
 	}
 
-	go b.unmashal()
+	err := processFrame(b)
+	if err != nil {
+		t.Fatalf("processFrame should ok, but got %v", err)
+	}
 
 	select {
 	case <-sem:
@@ -214,41 +228,36 @@ func TestProcessDigitalRead4(t *testing.T) {
 }
 
 func TestDigitalWrite(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
-	values := [8]int{1, 1, 1, 1, 0, 0, 0, 0}
-	gobottest.Assert(t, b.DigitalWrite(2, &values), nil)
+	b, _ := initTestFirmata()
+	values := [8]byte{1, 1, 1, 1, 0, 0, 0, 0}
+	gobottest.Assert(t, b.DigitalWrite_l(2, &values), nil)
 }
 
 func TestSetPinMode(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
-	gobottest.Assert(t, b.SetPinMode(13, PIN_MODE_OUTPUT), nil)
+	b, _ := initTestFirmata()
+	gobottest.Assert(t, b.SetPinMode_l(13, PIN_MODE_OUTPUT), nil)
 }
 
 func TestAnalogWrite(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
-	gobottest.Assert(t, b.AnalogWrite(0, 128), nil)
+	b, _ := initTestFirmata()
+	gobottest.Assert(t, b.AnalogWrite_l(0, 128), nil)
 }
 
 func TestReportAnalog(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
-	gobottest.Assert(t, b.ReportAnalog(0, 1), nil)
-	gobottest.Assert(t, b.ReportAnalog(0, 0), nil)
+	b, _ := initTestFirmata()
+	gobottest.Assert(t, b.ReportAnalog_l(0, 1), nil)
+	gobottest.Assert(t, b.ReportAnalog_l(0, 0), nil)
 }
 
 func TestProcessPinState13(t *testing.T) {
-	sem := make(chan bool)
-	b := initTestFirmata()
-	b.connected.Store(true)
+	b, _ := initTestFirmata()
 	SetTestReadData([]byte{240, 110, 13, 1, 1, 247})
 
+	sem := make(chan bool, 1)
 	b.OnPinState = func(pin *Pin) {
 		gobottest.Assert(t, *pin, Pin{
 			ID: 13,
-			Modes: map[int]byte{
+			Modes: map[byte]byte{
 				0: 127,
 				1: 1,
 				4: 1,
@@ -261,7 +270,10 @@ func TestProcessPinState13(t *testing.T) {
 		sem <- true
 	}
 
-	go b.unmashal()
+	err := processFrame(b)
+	if err != nil {
+		t.Fatalf("processFrame should ok, but got %v", err)
+	}
 
 	select {
 	case <-sem:
@@ -271,35 +283,25 @@ func TestProcessPinState13(t *testing.T) {
 }
 
 func TestI2cConfig(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
-	gobottest.Assert(t, b.I2cConfig(100), nil)
+	b, _ := initTestFirmata()
+	gobottest.Assert(t, b.I2cConfig_l(100), nil)
 }
 
 func TestI2cWrite(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
-	gobottest.Assert(t, b.I2cWrite(0x00, []byte{0x01, 0x02}), nil)
+	b, _ := initTestFirmata()
+	gobottest.Assert(t, b.I2cWrite_l(0x00, []byte{0x01, 0x02}), nil)
 }
 
 func TestI2cRead(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
-	gobottest.Assert(t, b.I2cRead(0x00, 10), nil)
-}
-
-func TestWriteSysex(t *testing.T) {
-	b := initTestFirmata()
-	b.connected.Store(true)
-	gobottest.Assert(t, b.WriteSysex([]byte{0x01, 0x02}), nil)
+	b, _ := initTestFirmata()
+	gobottest.Assert(t, b.I2cRead_l(0x00, 10), nil)
 }
 
 func TestProcessI2cReply(t *testing.T) {
-	sem := make(chan bool)
-	b := initTestFirmata()
-	b.connected.Store(true)
+	b, _ := initTestFirmata()
 	SetTestReadData([]byte{240, 119, 9, 0, 0, 0, 24, 1, 1, 0, 26, 1, 247})
 
+	sem := make(chan bool, 1)
 	b.OnI2cReply = func(reply *I2cReply) {
 		gobottest.Assert(t, *reply, I2cReply{
 			Address:  9,
@@ -309,7 +311,10 @@ func TestProcessI2cReply(t *testing.T) {
 		sem <- true
 	}
 
-	go b.unmashal()
+	err := processFrame(b)
+	if err != nil {
+		t.Fatalf("processFrame should ok, but got %v", err)
+	}
 
 	select {
 	case <-sem:
@@ -319,17 +324,19 @@ func TestProcessI2cReply(t *testing.T) {
 }
 
 func TestProcessStringData(t *testing.T) {
-	sem := make(chan bool)
-	b := initTestFirmata()
-	b.connected.Store(true)
+	b, _ := initTestFirmata()
 	SetTestReadData(append([]byte{240, 0x71}, append([]byte("Hello Firmata!"), 247)...))
 
+	sem := make(chan bool, 1)
 	b.OnStringData = func(buf []byte) {
 		gobottest.Assert(t, string(buf), "Hello Firmata!")
 		sem <- true
 	}
 
-	go b.unmashal()
+	err := processFrame(b)
+	if err != nil {
+		t.Fatalf("processFrame should ok, but got %v", err)
+	}
 
 	select {
 	case <-sem:
@@ -339,8 +346,7 @@ func TestProcessStringData(t *testing.T) {
 }
 
 func TestServoConfig(t *testing.T) {
-	b := NewFirmata()
-	b.c = readWriteCloser{}
+	b, _ := initTestFirmata()
 
 	tests := []struct {
 		description string
@@ -369,7 +375,7 @@ func TestServoConfig(t *testing.T) {
 		writeDataMutex.Lock()
 		testWriteData.Reset()
 		writeDataMutex.Unlock()
-		err := b.ServoConfig(test.arguments[0], test.arguments[1], test.arguments[2])
+		err := b.ServoConfig_l(byte(test.arguments[0]), test.arguments[1], test.arguments[2])
 		writeDataMutex.Lock()
 		gobottest.Assert(t, testWriteData.Bytes(), test.expected)
 		gobottest.Assert(t, err, test.result)
@@ -378,17 +384,19 @@ func TestServoConfig(t *testing.T) {
 }
 
 func TestProcessSysexData(t *testing.T) {
-	sem := make(chan bool)
-	b := initTestFirmata()
-	b.connected.Store(true)
+	b, _ := initTestFirmata()
 	SetTestReadData([]byte{240, 17, 1, 2, 3, 247})
 
+	sem := make(chan bool, 1)
 	b.OnSysexResponse = func(buf []byte) {
-		gobottest.Assert(t, buf, []byte{240, 17, 1, 2, 3, 247})
+		gobottest.Assert(t, buf, []byte{17, 1, 2, 3})
 		sem <- true
 	}
 
-	go b.unmashal()
+	err := processFrame(b)
+	if err != nil {
+		t.Fatalf("processFrame should ok, but got %v", err)
+	}
 
 	select {
 	case <-sem:

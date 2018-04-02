@@ -58,3 +58,9 @@ func (vs *Version) compatible() (c VersionCompatible) {
 	}
 	return VerSame
 }
+
+type VersionInfo struct {
+	ProtocolVersion *Version
+	FirmwareVersion *Version
+	FirmwareName    []byte
+}

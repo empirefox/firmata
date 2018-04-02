@@ -54,19 +54,20 @@ const (
 	SYSEX_REALTIME          = 0x7F // MIDI Reserved for realtime messages
 
 	// pin modes
-	PIN_MODE_INPUT   int = 0x00 // same as INPUT defined in Arduino.h
-	PIN_MODE_OUTPUT      = 0x01 // same as OUTPUT defined in Arduino.h
-	PIN_MODE_ANALOG      = 0x02 // analog pin in analogInput mode
-	PIN_MODE_PWM         = 0x03 // digital pin in PWM output mode
-	PIN_MODE_SERVO       = 0x04 // digital pin in Servo output mode
-	PIN_MODE_SHIFT       = 0x05 // shiftIn/shiftOut mode
-	PIN_MODE_I2C         = 0x06 // pin included in I2C setup
-	PIN_MODE_ONEWIRE     = 0x07 // pin configured for 1-wire
-	PIN_MODE_STEPPER     = 0x08 // pin configured for stepper motor
-	PIN_MODE_ENCODER     = 0x09 // pin configured for rotary encoders
-	PIN_MODE_SERIAL      = 0x0A // pin configured for serial communication
-	PIN_MODE_PULLUP      = 0x0B // enable internal pull-up resistor for pin
-	PIN_MODE_IGNORE      = 0x7F // pin configured to be ignored by digitalWrite and capabilityResponse
+	PIN_MODE_INPUT   = 0x00 // same as INPUT defined in Arduino.h
+	PIN_MODE_OUTPUT  = 0x01 // same as OUTPUT defined in Arduino.h
+	PIN_MODE_ANALOG  = 0x02 // analog pin in analogInput mode
+	PIN_MODE_PWM     = 0x03 // digital pin in PWM output mode
+	PIN_MODE_SERVO   = 0x04 // digital pin in Servo output mode
+	PIN_MODE_SHIFT   = 0x05 // shiftIn/shiftOut mode
+	PIN_MODE_I2C     = 0x06 // pin included in I2C setup
+	PIN_MODE_ONEWIRE = 0x07 // pin configured for 1-wire
+	PIN_MODE_STEPPER = 0x08 // pin configured for stepper motor
+	PIN_MODE_ENCODER = 0x09 // pin configured for rotary encoders
+	PIN_MODE_SERIAL  = 0x0A // pin configured for serial communication
+	PIN_MODE_PULLUP  = 0x0B // enable internal pull-up resistor for pin
+	PIN_MODE_IGNORE  = 0x7F // pin configured to be ignored by digitalWrite and capabilityResponse
 
 	TOTAL_PIN_MODES = 13
+	MaxRecvSize     = 1373
 )
