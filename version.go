@@ -42,11 +42,11 @@ func NewVersion(cmajor, cminor, smajor, sminor byte) *Version {
 }
 
 func NewFirmwareVersion(smajor, sminor byte) *Version {
-	return NewVersion(FIRMWARE_MAJOR_VERSION, FIRMWARE_MINOR_VERSION, smajor, sminor)
+	return NewVersion(FIRMATA_FIRMWARE_MAJOR_VERSION, FIRMATA_FIRMWARE_MINOR_VERSION, smajor, sminor)
 }
 
 func NewProtocalVersion(smajor, sminor byte) *Version {
-	return NewVersion(PROTOCOL_MAJOR_VERSION, PROTOCOL_MINOR_VERSION, smajor, sminor)
+	return NewVersion(FIRMATA_PROTOCOL_MAJOR_VERSION, FIRMATA_PROTOCOL_MINOR_VERSION, smajor, sminor)
 }
 
 func (vs *Version) compatible() (c VersionCompatible) {

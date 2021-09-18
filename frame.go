@@ -366,7 +366,7 @@ func (fr *ReadFramer) ReadFrame() (f *ReadFrame, err error) {
 			fr.proxyPipesWrite()
 		}
 	default:
-		err = fmt.Errorf("Unsupported firmata type: %X", fr.buf[0])
+		err = fmt.Errorf("unsupported firmata type: %X", fr.buf[0])
 	}
 	return
 }
@@ -437,7 +437,7 @@ func (fr *proxyReadFramer) readSendNextFrame() (err error) {
 			err = fr.send()
 		}
 	default:
-		err = fmt.Errorf("Unsupported firmata type: %X", fr.buf[0])
+		err = fmt.Errorf("unsupported firmata type: %X", fr.buf[0])
 	}
 	return
 }

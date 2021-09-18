@@ -163,7 +163,7 @@ func (f *Firmata) proccessFrame(frame *ReadFrame) (err error) {
 			}
 
 		default:
-			return fmt.Errorf("Unexpected firmata type: %X", frame.Type)
+			return fmt.Errorf("unexpected firmata type: %X", frame.Type)
 		}
 	}
 	return nil

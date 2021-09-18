@@ -17,7 +17,6 @@ func (readWriteCloser) Write(p []byte) (int, error) {
 	return testWriteData.Write(p)
 }
 
-var clientMutex sync.Mutex
 var writeDataMutex sync.Mutex
 var readDataMutex sync.Mutex
 var testReadData = []byte{}
@@ -27,7 +26,6 @@ func SetTestReadData(d []byte) {
 	readDataMutex.Lock()
 	defer readDataMutex.Unlock()
 	testReadData = d
-	return
 }
 
 func (readWriteCloser) Read(b []byte) (int, error) {
@@ -83,12 +81,6 @@ func processFrame(f *Firmata) error {
 		return err
 	}
 	return f.proccessFrame(frame)
-}
-
-func startProccessNextFrame(f *Firmata) chan error {
-	errCh := make(chan error)
-	go func() { errCh <- processFrame(f) }()
-	return errCh
 }
 
 func initTestFirmata() (*Firmata, error) {
