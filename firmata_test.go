@@ -130,7 +130,7 @@ func TestProcessAnalogRead0(t *testing.T) {
 	SetTestReadData([]byte{0xE0, 0x23, 0x05})
 
 	sem := make(chan bool, 1)
-	b.OnAnalogMessage = func(pin *Pin) {
+	b.OnAnalogMessage = func(f *Firmata, pin *Pin) {
 		gobottest.Assert(t, pin.Value, 675)
 		sem <- true
 	}
@@ -152,7 +152,7 @@ func TestProcessAnalogRead1(t *testing.T) {
 	SetTestReadData([]byte{0xE1, 0x23, 0x06})
 
 	sem := make(chan bool, 1)
-	b.OnAnalogMessage = func(pin *Pin) {
+	b.OnAnalogMessage = func(f *Firmata, pin *Pin) {
 		gobottest.Assert(t, pin.Value, 803)
 		sem <- true
 	}
@@ -175,7 +175,7 @@ func TestProcessDigitalRead2(t *testing.T) {
 	SetTestReadData([]byte{0x90, 0x04, 0x00})
 
 	sem := make(chan bool, 1)
-	b.OnDigitalMessage = func(pins []*Pin) {
+	b.OnDigitalMessage = func(f *Firmata, pins []*Pin) {
 		gobottest.Assert(t, len(pins), 1)
 		gobottest.Assert(t, pins[0].ID, byte(2))
 		gobottest.Assert(t, pins[0].Value, 1)
@@ -200,7 +200,7 @@ func TestProcessDigitalRead4(t *testing.T) {
 	SetTestReadData([]byte{0x90, 0x16, 0x00})
 
 	sem := make(chan bool, 1)
-	b.OnDigitalMessage = func(pins []*Pin) {
+	b.OnDigitalMessage = func(f *Firmata, pins []*Pin) {
 		gobottest.Assert(t, len(pins), 1)
 		gobottest.Assert(t, pins[0].ID, byte(4))
 		gobottest.Assert(t, pins[0].Value, 1)
@@ -246,7 +246,7 @@ func TestProcessPinState13(t *testing.T) {
 	SetTestReadData([]byte{240, 110, 13, 1, 1, 247})
 
 	sem := make(chan bool, 1)
-	b.OnPinState = func(pin *Pin) {
+	b.OnPinState = func(f *Firmata, pin *Pin) {
 		gobottest.Assert(t, *pin, Pin{
 			ID: 13,
 			Modes: map[byte]byte{
@@ -294,7 +294,7 @@ func TestProcessI2cReply(t *testing.T) {
 	SetTestReadData([]byte{240, 119, 9, 0, 0, 0, 24, 1, 1, 0, 26, 1, 247})
 
 	sem := make(chan bool, 1)
-	b.OnI2cReply = func(reply *I2cReply) {
+	b.OnI2cReply = func(f *Firmata, reply *I2cReply) {
 		gobottest.Assert(t, *reply, I2cReply{
 			Address:  9,
 			Register: 0,
@@ -320,7 +320,7 @@ func TestProcessStringData(t *testing.T) {
 	SetTestReadData(append([]byte{240, 0x71}, append([]byte("Hello Firmata!"), 247)...))
 
 	sem := make(chan bool, 1)
-	b.OnStringData = func(buf []byte) {
+	b.OnStringData = func(f *Firmata, buf []byte) {
 		gobottest.Assert(t, string(buf), "Hello Firmata!")
 		sem <- true
 	}
@@ -380,7 +380,7 @@ func TestProcessSysexData(t *testing.T) {
 	SetTestReadData([]byte{240, 17, 1, 2, 3, 247})
 
 	sem := make(chan bool, 1)
-	b.OnSysexResponse = func(buf []byte) {
+	b.OnSysexResponse = func(f *Firmata, buf []byte) {
 		gobottest.Assert(t, buf, []byte{17, 1, 2, 3})
 		sem <- true
 	}

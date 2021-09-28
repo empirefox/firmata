@@ -12,7 +12,7 @@ var (
 func (f *Firmata) onConnected() {
 	f.handshakeOnce.Do(func() { close(f.handshakeOK) })
 	if f.OnConnected != nil {
-		f.OnConnected()
+		f.OnConnected(f)
 	}
 }
 
@@ -127,7 +127,7 @@ func (f *Firmata) proccessFrame(frame *ReadFrame) (err error) {
 			pin := f.AnalogPins_l[data.Pin]
 			pin.Value = int(data.Value)
 			if f.OnAnalogMessage != nil {
-				f.OnAnalogMessage(pin)
+				f.OnAnalogMessage(f, pin)
 			}
 		case DIGITAL_MESSAGE:
 			data := frame.Data.(*DigitalPinValueFrameData)
@@ -136,7 +136,7 @@ func (f *Firmata) proccessFrame(frame *ReadFrame) (err error) {
 			}
 			pins := f.setDigitalPortValues(data.Port, &data.Values)
 			if f.OnDigitalMessage != nil {
-				f.OnDigitalMessage(pins)
+				f.OnDigitalMessage(f, pins)
 			}
 		case PIN_STATE_RESPONSE:
 			data := frame.Data.(*PinStateFrameData)
@@ -147,19 +147,19 @@ func (f *Firmata) proccessFrame(frame *ReadFrame) (err error) {
 			pin.Mode = data.Mode
 			pin.State = data.State
 			if f.OnPinState != nil {
-				f.OnPinState(pin)
+				f.OnPinState(f, pin)
 			}
 		case I2C_REPLY:
 			if f.OnI2cReply != nil {
-				f.OnI2cReply(frame.Data.(*I2cReply))
+				f.OnI2cReply(f, frame.Data.(*I2cReply))
 			}
 		case STRING_DATA:
 			if f.OnStringData != nil {
-				f.OnStringData(frame.Data.([]byte))
+				f.OnStringData(f, frame.Data.([]byte))
 			}
 		case START_SYSEX:
 			if f.OnSysexResponse != nil {
-				f.OnSysexResponse(frame.Data.([]byte))
+				f.OnSysexResponse(f, frame.Data.([]byte))
 			}
 
 		default:

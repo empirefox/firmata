@@ -30,23 +30,23 @@ type Firmata struct {
 	Pins_l       []*Pin
 	AnalogPins_l []*Pin
 
-	OnConnected      func()
-	OnAnalogMessage  func(pin *Pin)
-	OnDigitalMessage func(pins []*Pin)
-	OnPinState       func(pin *Pin)
-	OnI2cReply       func(reply *I2cReply)
-	OnStringData     func(data []byte)
-	OnSysexResponse  func(buf []byte)
+	OnConnected      func(f *Firmata)
+	OnAnalogMessage  func(f *Firmata, pin *Pin)
+	OnDigitalMessage func(f *Firmata, pins []*Pin)
+	OnPinState       func(f *Firmata, pin *Pin)
+	OnI2cReply       func(f *Firmata, reply *I2cReply)
+	OnStringData     func(f *Firmata, data []byte)
+	OnSysexResponse  func(f *Firmata, buf []byte)
 }
 
 type Config struct {
-	OnConnected      func()
-	OnAnalogMessage  func(pin *Pin)
-	OnDigitalMessage func(pins []*Pin)
-	OnPinState       func(pin *Pin)
-	OnI2cReply       func(reply *I2cReply)
-	OnStringData     func(data []byte)
-	OnSysexResponse  func(buf []byte)
+	OnConnected      func(f *Firmata)
+	OnAnalogMessage  func(f *Firmata, pin *Pin)
+	OnDigitalMessage func(f *Firmata, pins []*Pin)
+	OnPinState       func(f *Firmata, pin *Pin)
+	OnI2cReply       func(f *Firmata, reply *I2cReply)
+	OnStringData     func(f *Firmata, data []byte)
+	OnSysexResponse  func(f *Firmata, buf []byte)
 }
 
 func Connect(ctx context.Context, c io.ReadWriteCloser, config *Config) (*Firmata, error) {
@@ -61,8 +61,8 @@ func Connect(ctx context.Context, c io.ReadWriteCloser, config *Config) (*Firmat
 	}
 
 	if config != nil && config.OnStringData != nil {
-		f.OnStringData = func(data []byte) {
-			config.OnStringData(From14bits(data))
+		f.OnStringData = func(f *Firmata, data []byte) {
+			config.OnStringData(f, From14bits(data))
 		}
 	}
 
