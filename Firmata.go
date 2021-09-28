@@ -39,6 +39,36 @@ type Firmata struct {
 	OnSysexResponse  func(buf []byte)
 }
 
+type Config struct {
+	OnConnected      func()
+	OnAnalogMessage  func(pin *Pin)
+	OnDigitalMessage func(pins []*Pin)
+	OnPinState       func(pin *Pin)
+	OnI2cReply       func(reply *I2cReply)
+	OnStringData     func(data []byte)
+	OnSysexResponse  func(buf []byte)
+}
+
+func Connect(ctx context.Context, c io.ReadWriteCloser, config *Config) (*Firmata, error) {
+	f := NewFirmata(c)
+	if config != nil {
+		f.OnConnected = config.OnConnected
+		f.OnAnalogMessage = config.OnAnalogMessage
+		f.OnDigitalMessage = config.OnDigitalMessage
+		f.OnPinState = config.OnPinState
+		f.OnI2cReply = config.OnI2cReply
+		f.OnSysexResponse = config.OnSysexResponse
+	}
+
+	if config != nil && config.OnStringData != nil {
+		f.OnStringData = func(data []byte) {
+			config.OnStringData(From14bits(data))
+		}
+	}
+
+	return f, f.Handshake(ctx)
+}
+
 func NewFirmata(c io.ReadWriteCloser) *Firmata {
 	return &Firmata{
 		reader: NewReadFramer(c),
@@ -158,6 +188,9 @@ func (f *Firmata) SetPinMode_l(pin byte, mode byte) error {
 	if pin >= byte(len(f.Pins_l)) {
 		return fmt.Errorf("SetPinMode pin out of index: %d", pin)
 	}
+	if f.Pins_l[pin].Mode == mode {
+		return nil
+	}
 	err := f.writer.SetPinMode(pin, mode)
 	if err == nil {
 		f.Pins_l[pin].Mode = mode
@@ -169,6 +202,9 @@ func (f *Firmata) SetPinMode_l(pin byte, mode byte) error {
 func (f *Firmata) SetDigitalPinValue_l(pin byte, value byte) error {
 	if pin >= byte(len(f.Pins_l)) {
 		return fmt.Errorf("SetDigitalPinValue pin out of index: %d", pin)
+	}
+	if f.Pins_l[pin].Value == int(value) {
+		return nil
 	}
 	err := f.writer.SetDigitalPinValue(pin, value)
 	if err == nil {
@@ -206,11 +242,16 @@ func (f *Firmata) ServoConfig_l(pin byte, max int, min int) error {
 }
 
 // AnalogWrite writes value to pin.
-func (f *Firmata) AnalogWrite_l(pin byte, value int) error {
+func (f *Firmata) AnalogWrite_l(pin byte, value int) (err error) {
 	if pin >= byte(len(f.Pins_l)) {
 		return fmt.Errorf("AnalogWrite pin(%d) not found", pin)
 	}
-	err := f.writer.AnalogWrite(pin, value)
+
+	if pin > 15 || value >= 0x4000 {
+		err = f.writer.ExtendedAnalogWrite(pin, value)
+	} else {
+		err = f.writer.AnalogWrite(pin, value)
+	}
 	if err == nil {
 		f.Pins_l[pin].Value = value
 	}
@@ -256,18 +297,30 @@ func (f *Firmata) ReportAnalog_l(pin byte, value byte) error {
 	return f.writer.ReportAnalog(pin, value)
 }
 
-// I2cRead reads numBytes from address once.
-func (f *Firmata) I2cRead_l(address int, numBytes byte) error {
-	return f.writer.I2cRead(address, numBytes)
-}
-
 // I2cWrite writes data to address.
 func (f *Firmata) I2cWrite_l(address int, data []byte) error {
 	return f.writer.I2cWrite(address, data)
+}
+
+// I2cRead reads numBytes from address once or continuous.
+func (f *Firmata) I2cRead_l(address int, autoRestartTransmission bool, continuous bool, numBytes byte) error {
+	return f.writer.I2cRead(address, autoRestartTransmission, continuous, numBytes)
+}
+
+func (f *Firmata) I2cStopReading_l(address int) error {
+	return f.writer.I2cStopReading(address)
 }
 
 // I2cConfig configures the delay in which a register can be read from after it
 // has been written to.
 func (f *Firmata) I2cConfig_l(delay uint) error {
 	return f.writer.I2cConfig(delay)
+}
+
+// SamplingInterval sets how often analog data and i2c data is reported to the
+// client. The default for the arduino implementation is 19ms. This means that
+// every 19ms analog data will be reported and any i2c devices with read
+// continuous mode will be read.
+func (f *Firmata) SamplingInterval_l(ms uint) error {
+	return f.writer.SamplingInterval(ms)
 }

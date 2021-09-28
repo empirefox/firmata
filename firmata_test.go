@@ -286,7 +286,7 @@ func TestI2cWrite(t *testing.T) {
 
 func TestI2cRead(t *testing.T) {
 	b, _ := initTestFirmata()
-	gobottest.Assert(t, b.I2cRead_l(0x00, 10), nil)
+	gobottest.Assert(t, b.I2cRead_l(0x00, false, false, 10), nil)
 }
 
 func TestProcessI2cReply(t *testing.T) {

@@ -23,11 +23,11 @@ func (fr *WriteFramer) Reset() error {
 }
 
 func (fr *WriteFramer) SetPinMode(pin byte, mode byte) error {
-	return fr.write([]byte{SET_PIN_MODE, byte(pin), byte(mode)})
+	return fr.write([]byte{SET_PIN_MODE, pin, byte(mode)})
 }
 
 func (fr *WriteFramer) SetDigitalPinValue(pin byte, value byte) error {
-	return fr.write([]byte{SET_DIGITAL_PIN_VALUE, byte(pin), byte(value)})
+	return fr.write([]byte{SET_DIGITAL_PIN_VALUE, pin, byte(value)})
 }
 
 func (fr *WriteFramer) SetDigitalPinHigh(pin byte) error {
@@ -56,7 +56,7 @@ func (fr *WriteFramer) ServoConfig(pin byte, max int, min int) error {
 	return fr.write([]byte{
 		START_SYSEX,
 		SERVO_CONFIG,
-		byte(pin),
+		pin,
 		byte(min & 0x7F),
 		byte((min >> 7) & 0x7F),
 		byte(max & 0x7F),
@@ -66,11 +66,57 @@ func (fr *WriteFramer) ServoConfig(pin byte, max int, min int) error {
 }
 
 func (fr *WriteFramer) AnalogWrite(pin byte, value int) error {
-	return fr.write([]byte{ANALOG_MESSAGE | byte(pin), byte(value & 0x7F), byte((value >> 7) & 0x7F)})
+	return fr.write([]byte{ANALOG_MESSAGE | pin, byte(value & 0x7F), byte((value >> 7) & 0x7F)})
+}
+
+func (fr *WriteFramer) ExtendedAnalogWrite(pin byte, value int) error {
+	b0 := byte(value & 0x7F)
+	b1 := byte((value >> 7) & 0x7F)
+	b2 := byte((value >> 14) & 0x7F)
+	b3 := byte((value >> 21) & 0x7F)
+	b4 := byte((value >> 28) & 0x7F)
+	if b4 != 0 {
+		return fr.write([]byte{START_SYSEX,
+			EXTENDED_ANALOG,
+			pin & 0x7F,
+			b0, b1, b2, b3, b4,
+			END_SYSEX,
+		})
+	}
+	if b3 != 0 {
+		return fr.write([]byte{START_SYSEX,
+			EXTENDED_ANALOG,
+			pin & 0x7F,
+			b0, b1, b2, b3,
+			END_SYSEX,
+		})
+	}
+	if b2 != 0 {
+		return fr.write([]byte{START_SYSEX,
+			EXTENDED_ANALOG,
+			pin & 0x7F,
+			b0, b1, b2,
+			END_SYSEX,
+		})
+	}
+	if b1 != 0 {
+		return fr.write([]byte{START_SYSEX,
+			EXTENDED_ANALOG,
+			pin & 0x7F,
+			b0, b1,
+			END_SYSEX,
+		})
+	}
+	return fr.write([]byte{START_SYSEX,
+		EXTENDED_ANALOG,
+		pin & 0x7F,
+		b0,
+		END_SYSEX,
+	})
 }
 
 func (fr *WriteFramer) PinStateQuery(pin byte) error {
-	return fr.write([]byte{START_SYSEX, PIN_STATE_QUERY, byte(pin), END_SYSEX})
+	return fr.write([]byte{START_SYSEX, PIN_STATE_QUERY, pin, END_SYSEX})
 }
 
 func (fr *WriteFramer) ReportVersion() error {
@@ -91,19 +137,7 @@ func (fr *WriteFramer) ReportDigital(port byte, value byte) error {
 }
 
 func (fr *WriteFramer) ReportAnalog(pin byte, value byte) error {
-	return fr.write([]byte{REPORT_ANALOG | byte(pin), byte(value)})
-}
-
-func (fr *WriteFramer) I2cRead(address int, numBytes byte) error {
-	return fr.write([]byte{
-		START_SYSEX,
-		I2C_REQUEST,
-		byte(address),
-		byte(PIN_MODE_OUTPUT << 3),
-		byte(numBytes) & 0x7F,
-		(byte(numBytes) >> 7) & 0x7F,
-		END_SYSEX,
-	})
+	return fr.write([]byte{REPORT_ANALOG | pin, byte(value)})
 }
 
 func (fr *WriteFramer) I2cWrite(address int, data []byte) error {
@@ -112,7 +146,16 @@ func (fr *WriteFramer) I2cWrite(address int, data []byte) error {
 		return fmt.Errorf("MAX_DATA_BYTES is %d, but data len is %d", MAX_DATA_BYTES, rs)
 	}
 
-	fr.bufI2C[2], fr.bufI2C[3], fr.bufI2C[rs-1] = byte(address), byte(PIN_MODE_INPUT<<3), END_SYSEX
+	fr.bufI2C[2], fr.bufI2C[rs-1] = byte(address&0x7F), END_SYSEX
+
+	byte3 := 0b00000000
+	addr3 := 0b00000111 & (address >> 7)
+	if addr3 != 0 {
+		// 10bit address
+		byte3 = 0b00100000 | addr3
+	}
+	fr.bufI2C[3] = byte(byte3)
+
 	buf := fr.bufI2C[4:]
 	for i, val := range data {
 		i = i * 2
@@ -122,12 +165,64 @@ func (fr *WriteFramer) I2cWrite(address int, data []byte) error {
 	return fr.write(fr.bufI2C[:rs])
 }
 
+func (fr *WriteFramer) I2cRead(address int, autoRestartTransmission bool, continuous bool, numBytes byte) error {
+	byte3 := 0b00001000
+	if continuous {
+		byte3 = 0b00010000
+	}
+	addr3 := 0b00000111 & (address >> 7)
+	if addr3 != 0 {
+		// 10bit address
+		byte3 |= 0b00100000 | addr3
+	}
+	if autoRestartTransmission {
+		byte3 |= 0b01000000
+	}
+
+	return fr.write([]byte{
+		START_SYSEX,
+		I2C_REQUEST,
+		byte(address),
+		byte(byte3),
+		byte(numBytes) & 0x7F,
+		(byte(numBytes) >> 7) & 0x7F,
+		END_SYSEX,
+	})
+}
+
+func (fr *WriteFramer) I2cStopReading(address int) error {
+	byte3 := 0b00011000
+	addr3 := 0b00000111 & (address >> 7)
+	if addr3 != 0 {
+		// 10bit address
+		byte3 = 0b00100000 | addr3
+	}
+
+	return fr.write([]byte{
+		START_SYSEX,
+		I2C_REQUEST,
+		byte(address),
+		byte(byte3),
+		END_SYSEX,
+	})
+}
+
 func (fr *WriteFramer) I2cConfig(delay uint) error {
 	return fr.write([]byte{
 		START_SYSEX,
 		I2C_CONFIG,
-		byte(delay & 0xFF),
-		byte((delay >> 8) & 0xFF),
+		byte(delay & 0x7F),
+		byte((delay >> 8) & 0x7F),
+		END_SYSEX,
+	})
+}
+
+func (fr *WriteFramer) SamplingInterval(ms uint) error {
+	return fr.write([]byte{
+		START_SYSEX,
+		SAMPLING_INTERVAL,
+		byte(ms & 0x7F),
+		byte((ms >> 7) & 0x7F),
 		END_SYSEX,
 	})
 }
@@ -308,7 +403,7 @@ func (fr *ReadFramer) ReadFrame() (f *ReadFrame, err error) {
 			}
 			fr.proxyPipesWrite()
 		case I2C_REPLY:
-			data := make([]byte, fr.cur/2-3)
+			data := Make14bits(fr.cur/2 - 3)
 			data[0] = byte(fr.buf[6]) | byte(fr.buf[7])<<7
 			ds := 1
 			for i := 8; i < fr.cur; i = i + 2 {
@@ -333,7 +428,7 @@ func (fr *ReadFramer) ReadFrame() (f *ReadFrame, err error) {
 			// fr.proxyPipesWrite()
 		case REPORT_FIRMWARE:
 			fr.cacheQueryfirmware = fr.copyBuf()
-			name := make([]byte, fr.cur-5)
+			name := Make14bits(fr.cur - 5)
 			ns := 0
 			for _, val := range fr.buf[4 : fr.cur-1] {
 				if val != 0 {
@@ -349,7 +444,7 @@ func (fr *ReadFramer) ReadFrame() (f *ReadFrame, err error) {
 				},
 			}
 		case STRING_DATA:
-			data := make([]byte, fr.cur-3)
+			data := Make14bits(fr.cur - 3)
 			copy(data, fr.buf[2:])
 			f = &ReadFrame{
 				Type: STRING_DATA,
