@@ -3,8 +3,9 @@ package firmata
 import (
 	"fmt"
 	"io"
-	"math"
 )
+
+var endSysex = []byte{END_SYSEX}
 
 type WriteFramer struct {
 	w      io.Writer
@@ -38,17 +39,11 @@ func (fr *WriteFramer) SetDigitalPinLow(pin byte) error {
 	return fr.SetDigitalPinValue(pin, 0)
 }
 
-func (fr *WriteFramer) DigitalWrite(port byte, values *[8]byte) error {
-	var portValue byte
-	for i, v := range values {
-		if v != 0 {
-			portValue = portValue | (1 << uint(i))
-		}
-	}
+func (fr *WriteFramer) DigitalWrite(port byte, portValue byte) error {
 	return fr.write([]byte{
-		DIGITAL_MESSAGE | byte(port),
+		DIGITAL_MESSAGE | byte(port&0x0F),
 		portValue & 0x7F,
-		(portValue >> 7) & 0x7F},
+		(portValue >> 7) & 0x01},
 	)
 }
 
@@ -65,11 +60,11 @@ func (fr *WriteFramer) ServoConfig(pin byte, max int, min int) error {
 	})
 }
 
-func (fr *WriteFramer) AnalogWrite(pin byte, value int) error {
+func (fr *WriteFramer) AnalogWrite(pin byte, value uint) error {
 	return fr.write([]byte{ANALOG_MESSAGE | pin, byte(value & 0x7F), byte((value >> 7) & 0x7F)})
 }
 
-func (fr *WriteFramer) ExtendedAnalogWrite(pin byte, value int) error {
+func (fr *WriteFramer) ExtendedAnalogWrite(pin byte, value uint) error {
 	b0 := byte(value & 0x7F)
 	b1 := byte((value >> 7) & 0x7F)
 	b2 := byte((value >> 14) & 0x7F)
@@ -131,6 +126,9 @@ func (fr *WriteFramer) CapabilitiesQuery() error {
 func (fr *WriteFramer) AnalogMappingQuery() error {
 	return fr.write([]byte{START_SYSEX, ANALOG_MAPPING_QUERY, END_SYSEX})
 }
+func (fr *WriteFramer) PinNamesRequest() error {
+	return fr.write([]byte{START_SYSEX, UD_PIN_NAMES_REQUEST, END_SYSEX})
+}
 
 func (fr *WriteFramer) ReportDigital(port byte, value byte) error {
 	return fr.write([]byte{REPORT_DIGITAL | byte(port), byte(value)})
@@ -142,10 +140,6 @@ func (fr *WriteFramer) ReportAnalog(pin byte, value byte) error {
 
 func (fr *WriteFramer) I2cWrite(address int, data []byte) error {
 	rs := len(data)*2 + 5
-	if rs > MAX_DATA_BYTES {
-		return fmt.Errorf("MAX_DATA_BYTES is %d, but data len is %d", MAX_DATA_BYTES, rs)
-	}
-
 	fr.bufI2C[2], fr.bufI2C[rs-1] = byte(address&0x7F), END_SYSEX
 
 	byte3 := 0b00000000
@@ -217,6 +211,14 @@ func (fr *WriteFramer) I2cConfig(delay uint) error {
 	})
 }
 
+func (fr *WriteFramer) StringWrite(s []byte) error {
+	return fr.writeAll(
+		[]byte{START_SYSEX, STRING_DATA},
+		To14bits(s),
+		endSysex,
+	)
+}
+
 func (fr *WriteFramer) SamplingInterval(ms uint) error {
 	return fr.write([]byte{
 		START_SYSEX,
@@ -232,6 +234,16 @@ func (fr *WriteFramer) write(b []byte) (err error) {
 	return
 }
 
+func (fr *WriteFramer) writeAll(bs ...[]byte) (err error) {
+	for _, b := range bs {
+		_, err = fr.w.Write(b)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 type ReadFrame struct {
 	Type byte
 	Data interface{}
@@ -244,7 +256,7 @@ type AnalogPinValueFrameData struct {
 
 type DigitalPinValueFrameData struct {
 	Port   byte
-	Values [8]byte
+	Values byte // D7----D0
 }
 
 type CapabilityFrameData struct {
@@ -255,7 +267,7 @@ type CapabilityFrameData struct {
 type PinStateFrameData struct {
 	Pin   byte
 	Mode  byte
-	State int
+	State uint
 }
 
 type FirmwareFrameData struct {
@@ -267,17 +279,10 @@ type ReadFramer struct {
 	r   io.Reader
 	buf [MaxRecvSize]byte
 	cur int
-
-	pipes []io.WriteCloser
-
-	cacheReportversion  []byte
-	cacheQueryfirmware  []byte
-	cacheAnalogMappings []byte
-	cacheCapability     []byte
 }
 
 func NewReadFramer(r io.Reader) *ReadFramer {
-	return &ReadFramer{r: r, pipes: make([]io.WriteCloser, 0, 32)}
+	return &ReadFramer{r: r}
 }
 
 func (fr *ReadFramer) readStart3() error {
@@ -313,7 +318,6 @@ func (fr *ReadFramer) ReadFrame() (f *ReadFrame, err error) {
 	messageType := fr.buf[0]
 	switch {
 	case REPORT_VERSION == messageType:
-		fr.cacheReportversion = []byte{fr.buf[0], fr.buf[1], fr.buf[2]}
 		f = &ReadFrame{
 			Type: REPORT_VERSION,
 			Data: NewProtocalVersion(fr.buf[1], fr.buf[2]),
@@ -326,40 +330,40 @@ func (fr *ReadFramer) ReadFrame() (f *ReadFrame, err error) {
 				Value: uint(fr.buf[1]) | uint(fr.buf[2])<<7,
 			},
 		}
-		fr.proxyPipesWrite()
 	case DIGITAL_MESSAGE <= messageType && messageType <= 0x9F:
 		data := DigitalPinValueFrameData{
 			Port: messageType & 0x0F,
-		}
-		// D7----D0
-		portValue := fr.buf[1] | fr.buf[2]<<7
-		var i byte
-		for i = 0; i < 8; i++ {
-			data.Values[i] = portValue >> i & 0x01
+			// D7----D0
+			Values: fr.buf[1] | fr.buf[2]<<7,
 		}
 		f = &ReadFrame{
 			Type: DIGITAL_MESSAGE,
 			Data: &data,
 		}
-		fr.proxyPipesWrite()
 	case START_SYSEX == messageType:
 		err = fr.readUtil(END_SYSEX)
 		if err != nil {
 			return
 		}
 
+		// fr.cur == full message size
+
 		switch fr.buf[1] {
 		case CAPABILITY_RESPONSE:
-			fr.cacheCapability = fr.copyBuf()
-			pins := make([]*Pin, fr.cur/2-1)
+			pins := make([]*Pin, (fr.cur-3)/2)
 			modes := make(map[byte]byte, TOTAL_PIN_MODES)
-			var pid byte
+			var dx byte
 			n := 0
 
 			for i, val := range fr.buf[2 : fr.cur-1] {
-				if val == 127 {
-					pins[pid] = &Pin{ID: pid, Modes: modes, Mode: PIN_MODE_OUTPUT}
-					pid++
+				if val == 0x7F {
+					pins[dx] = &Pin{
+						Dx:     dx,
+						Name:   PX, // unkown name
+						Modes:  modes,
+						Mode_l: PIN_MODE_OUTPUT,
+					}
+					dx++
 					modes = make(map[byte]byte)
 				} else {
 					if n == 0 {
@@ -373,84 +377,70 @@ func (fr *ReadFramer) ReadFrame() (f *ReadFrame, err error) {
 			f = &ReadFrame{
 				Type: CAPABILITY_RESPONSE,
 				Data: &CapabilityFrameData{
-					TotalPorts: byte(math.Floor(float64(pid)/8) + 1),
-					Pins:       pins[:pid],
+					TotalPorts: (dx + 7) / 8,
+					Pins:       pins[:dx],
 				},
 			}
 		case ANALOG_MAPPING_RESPONSE:
-			fr.cacheAnalogMappings = fr.copyBuf()
 			data := make([]byte, fr.cur-3)
 			copy(data, fr.buf[2:])
 			f = &ReadFrame{
 				Type: ANALOG_MAPPING_RESPONSE,
 				Data: data,
 			}
+		case UD_PIN_NAMES_REPLY:
+			// 0  START_SYSEX                  (0xF0)
+			// 1  UD_PIN_NAMES_REPLY           (0x07)
+			// 2  pin0 PA0-PZ15(191) bits 0-6  (least significant byte)
+			// 4  pin0 PA0-PZ15(191) bits 7-13 (most significant byte)
+			// ... pin1 and more
+			// N  END_SYSEX                    (0xF7)
+			f = &ReadFrame{
+				Type: UD_PIN_NAMES_REPLY,
+				Data: From14bits(fr.buf[2 : fr.cur-1]),
+			}
+
 		case PIN_STATE_RESPONSE:
 			state := uint(fr.buf[4])
 			if fr.cur > 6 {
-				state = uint(state) | uint(fr.buf[5])<<7
+				state = state | uint(fr.buf[5])<<7
 			}
 			if fr.cur > 7 {
-				state = uint(state) | uint(fr.buf[6])<<14
+				state = state | uint(fr.buf[6])<<14
+			}
+			if fr.cur > 8 {
+				state = state | uint(fr.buf[7])<<21
 			}
 			f = &ReadFrame{
 				Type: PIN_STATE_RESPONSE,
 				Data: &PinStateFrameData{
 					Pin:   fr.buf[2],
 					Mode:  fr.buf[3],
-					State: int(state),
+					State: state,
 				},
 			}
-			fr.proxyPipesWrite()
 		case I2C_REPLY:
-			data := Make14bits(fr.cur/2 - 3)
-			data[0] = byte(fr.buf[6]) | byte(fr.buf[7])<<7
-			ds := 1
-			for i := 8; i < fr.cur; i = i + 2 {
-				if fr.buf[i] == byte(0xF7) {
-					break
-				}
-				if i+2 > fr.cur {
-					break
-				}
-				data[ds] = byte(fr.buf[i]) | byte(fr.buf[i+1])<<7
-				ds++
-			}
 			f = &ReadFrame{
 				Type: I2C_REPLY,
 				Data: &I2cReply{
-					Address:  byte(fr.buf[2]) | byte(fr.buf[3])<<7,
-					Register: int(byte(fr.buf[4]) | byte(fr.buf[5])<<7),
-					Data:     data,
+					Address:  int(fr.buf[2]) | int(fr.buf[3])<<7,
+					Register: int(fr.buf[4]) | int(fr.buf[5])<<7,
+					Data:     From14bits(fr.buf[6 : fr.cur-1]),
 				},
 			}
-			// TODO standalone conn pipe
-			// fr.proxyPipesWrite()
 		case REPORT_FIRMWARE:
-			fr.cacheQueryfirmware = fr.copyBuf()
-			name := Make14bits(fr.cur - 5)
-			ns := 0
-			for _, val := range fr.buf[4 : fr.cur-1] {
-				if val != 0 {
-					name[ns] = val
-					ns++
-				}
-			}
 			f = &ReadFrame{
 				Type: REPORT_FIRMWARE,
 				Data: &FirmwareFrameData{
 					FirmwareVersion: NewFirmwareVersion(fr.buf[2], fr.buf[3]),
-					FirmwareName:    name[:ns],
+					FirmwareName:    From14bits(fr.buf[4 : fr.cur-1]),
 				},
 			}
 		case STRING_DATA:
-			data := Make14bits(fr.cur - 3)
-			copy(data, fr.buf[2:])
 			f = &ReadFrame{
 				Type: STRING_DATA,
-				Data: data,
+				Data: From14bits(fr.buf[2 : fr.cur-1]),
 			}
-			fr.proxyPipesWrite()
 		default:
 			data := make([]byte, fr.cur-2)
 			copy(data, fr.buf[1:])
@@ -458,116 +448,9 @@ func (fr *ReadFramer) ReadFrame() (f *ReadFrame, err error) {
 				Type: START_SYSEX,
 				Data: data,
 			}
-			fr.proxyPipesWrite()
 		}
 	default:
 		err = fmt.Errorf("unsupported firmata type: %X", fr.buf[0])
 	}
 	return
-}
-
-func (fr *ReadFramer) copyBuf() []byte {
-	clone := make([]byte, fr.cur)
-	copy(clone, fr.buf[:])
-	return clone
-}
-
-func (fr *ReadFramer) proxyPipesWrite() {
-	var i int
-	var err error
-	for _, w := range fr.pipes {
-		_, err = w.Write(fr.buf[:fr.cur])
-		if err != nil {
-			w.Close()
-			continue
-		}
-		fr.pipes[i] = w
-		i++
-	}
-	fr.pipes = fr.pipes[:i]
-}
-
-type proxyReadFramer struct {
-	f    *Firmata
-	r    io.Reader
-	w    io.Writer
-	buf  [MAX_DATA_BYTES]byte
-	cur  int
-	done chan error
-}
-
-func (fr *proxyReadFramer) readSendNextFrame() (err error) {
-	fr.cur = 0
-	err = fr.read(1)
-	if err != nil {
-		return
-	}
-
-	messageType := fr.buf[0]
-	if messageType < 0xF0 {
-		messageType = fr.buf[0] & 0xF0
-	}
-	switch messageType {
-	case REPORT_VERSION:
-		_, err = fr.w.Write(fr.f.reader.cacheReportversion)
-	case SYSTEM_RESET:
-		err = fr.send()
-	case REPORT_ANALOG, REPORT_DIGITAL:
-		err = fr.readSend(1)
-	case ANALOG_MESSAGE, DIGITAL_MESSAGE, SET_PIN_MODE, SET_DIGITAL_PIN_VALUE:
-		err = fr.readSend(2)
-	case START_SYSEX:
-		err = fr.readUtil(END_SYSEX)
-		if err != nil {
-			return
-		}
-		switch fr.buf[1] {
-		case REPORT_FIRMWARE:
-			_, err = fr.w.Write(fr.f.reader.cacheQueryfirmware)
-		case CAPABILITY_QUERY:
-			_, err = fr.w.Write(fr.f.reader.cacheCapability)
-		case ANALOG_MAPPING_QUERY:
-			_, err = fr.w.Write(fr.f.reader.cacheAnalogMappings)
-		default:
-			err = fr.send()
-		}
-	default:
-		err = fmt.Errorf("unsupported firmata type: %X", fr.buf[0])
-	}
-	return
-}
-
-func (fr *proxyReadFramer) readSend(n int) error {
-	if err := fr.read(n); err != nil {
-		return err
-	}
-	return fr.send()
-}
-
-func (fr *proxyReadFramer) read(n int) error {
-	_, err := io.ReadFull(fr.r, fr.buf[fr.cur:fr.cur+n])
-	if err == nil {
-		fr.cur += n
-	}
-	return err
-}
-
-func (fr *proxyReadFramer) readUtil(end byte) error {
-	for {
-		next := fr.cur + 1
-		_, err := io.ReadFull(fr.r, fr.buf[fr.cur:next])
-		if err != nil {
-			return err
-		}
-		if fr.buf[fr.cur] == end {
-			fr.cur = next
-			return nil
-		}
-		fr.cur = next
-	}
-}
-
-func (fr *proxyReadFramer) send() error {
-	fr.f.Loop(func() { fr.done <- fr.f.writer.write(fr.buf[:fr.cur]) })
-	return <-fr.done
 }

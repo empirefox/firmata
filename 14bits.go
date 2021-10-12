@@ -23,3 +23,15 @@ func From14bits(in []byte) (out []byte) {
 
 	return out
 }
+
+func To14bits(in []byte) (out []byte) {
+	lenIn := len(in)
+	out = make([]byte, lenIn*2)
+	for i := 0; i < lenIn; i++ {
+		j := i * 2
+		out[j] = in[i] & 0x7F
+		out[j+1] = in[i] >> 7
+	}
+
+	return out
+}

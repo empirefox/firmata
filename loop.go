@@ -3,6 +3,7 @@ package firmata
 import (
 	"errors"
 	"fmt"
+	"math"
 )
 
 var (
@@ -72,80 +73,145 @@ func (f *Firmata) proccessFrame(frame *ReadFrame) (err error) {
 	case REPORT_VERSION:
 		if f.ProtocolVersion == nil {
 			f.ProtocolVersion = frame.Data.(*Version)
-			return f.writer.ReportFirmware()
+			return f.reportInit_l()
 		}
 	case REPORT_FIRMWARE:
+		if f.ProtocolVersion == nil {
+			return f.reportInit_l()
+		}
 		if f.FirmwareVersion == nil {
 			data := frame.Data.(*FirmwareFrameData)
 			f.FirmwareVersion = data.FirmwareVersion
 			f.FirmwareName = data.FirmwareName
-			return f.writer.CapabilitiesQuery()
+			return f.reportInit_l()
 		}
 	case CAPABILITY_RESPONSE:
-		if f.Pins_l == nil {
+		if f.FirmwareVersion == nil {
+			return f.reportInit_l()
+		}
+		if f.Pins == nil {
 			data := frame.Data.(*CapabilityFrameData)
-			f.Pins_l = data.Pins
-			f.TotalPorts_l = data.TotalPorts
-			return f.writer.AnalogMappingQuery()
-		}
-	case ANALOG_MAPPING_RESPONSE:
-		if f.Pins_l == nil {
-			return f.reportVersion()
-		}
-		if f.AnalogPins_l == nil {
-			data := frame.Data.([]byte)
-			if len(data) > len(f.Pins_l) {
-				return fmt.Errorf("ANALOG_MAPPING_RESPONSE pins more than total: %d > %d", len(data), len(f.Pins_l))
+			totalPins := len(data.Pins)
+			if totalPins == 0 || totalPins > math.MaxUint8 {
+				return fmt.Errorf("CAPABILITY_RESPONSE invalid pin size: %d",
+					totalPins)
 			}
 
-			aps := 0
-			analogPins := make([]*Pin, len(f.Pins_l))
+			f.Pins = data.Pins
+			f.TotalPins = byte(totalPins)
+			f.TotalPorts = data.TotalPorts
+			return f.reportInit_l()
+		}
+	case ANALOG_MAPPING_RESPONSE:
+		if f.Pins == nil {
+			return f.reportInit_l()
+		}
+		if f.AnalogPins == nil {
+			data := frame.Data.([]byte)
+			if len(data) > int(f.TotalPins) {
+				return fmt.Errorf("ANALOG_MAPPING_RESPONSE pins more than total: %d > %d", len(data), f.TotalPins)
+			}
 
-			for pid, val := range data {
-				pin := f.Pins_l[pid]
-				pin.AnalogChannel = val
+			var aps byte
+			analogPins := make([]*Pin, f.TotalPins)
+
+			for dx, val := range data {
+				pin := f.Pins[dx]
+				pin.Ax = val
 
 				if val != 127 {
 					analogPins[aps] = pin
 					aps++
 				}
 			}
-			f.AnalogPins_l = analogPins[:aps]
+			f.AnalogPins = analogPins[:aps]
+			f.TotalAnalogPins = aps
+
+			for i := byte(0); i < f.TotalPins; i++ {
+				err := f.writer.PinStateQuery(i)
+				if err != nil {
+					return err
+				}
+			}
+			return f.reportInit_l()
+		}
+	case UD_PIN_NAMES_REPLY:
+		if f.AnalogPins == nil {
+			return f.reportInit_l()
+		}
+		if f.DxByName == nil {
+			data := frame.Data.([]byte)
+			if len(data) != int(f.TotalPins) {
+				return fmt.Errorf("PIN_NAMES size must be %d, but got %d",
+					f.TotalPins, len(data))
+			}
+
+			f.DxByName = make(map[PinName]byte, f.TotalPins)
+			for i, name := range data {
+				n := PinName(name)
+				if _, ok := f.DxByName[n]; ok {
+					return fmt.Errorf("PIN_NAMES got duplicated name: %s", n)
+				}
+				f.DxByName[n] = byte(i)
+				f.Pins[i].Name = n
+			}
+
 			f.connectedOnce.Do(f.onConnected)
 		}
 	default:
-		if f.AnalogPins_l == nil {
-			return f.reportVersion()
+		if f.AnalogPins == nil || (f.DxByName == nil && frame.Type != PIN_STATE_RESPONSE) {
+			return f.reportInit_l()
 		}
 
 		switch frame.Type {
 		case ANALOG_MESSAGE:
 			data := frame.Data.(*AnalogPinValueFrameData)
-			if data.Pin >= byte(len(f.AnalogPins_l)) {
+			if data.Pin >= f.TotalAnalogPins {
 				return fmt.Errorf("ANALOG_MESSAGE pin out of index: %d", data.Pin)
 			}
-			pin := f.AnalogPins_l[data.Pin]
-			pin.Value = int(data.Value)
+			pin := f.AnalogPins[data.Pin]
+			pin.Value_l = data.Value
 			if f.OnAnalogMessage != nil {
 				f.OnAnalogMessage(f, pin)
 			}
 		case DIGITAL_MESSAGE:
 			data := frame.Data.(*DigitalPinValueFrameData)
-			if data.Port > f.TotalPorts_l {
+			if data.Port > f.TotalPorts {
 				return fmt.Errorf("DIGITAL_MESSAGE port out of index: %d", data.Port)
 			}
-			pins := f.setDigitalPortValues(data.Port, &data.Values)
+
+			inputs := f.PortConfigInputs[data.Port]
+			if data.Values&^inputs != 0 {
+				return fmt.Errorf("DIGITAL_MESSAGE portConfigInputs error: %#v", data)
+			}
+
+			var pins byte
+			var mask byte
+			var inValue uint
+			for i, pin := range f.PortPins_l(data.Port) {
+				mask = 1 << i
+				inValue = uint(data.Values>>i) & 1
+				if inputs&mask != 0 && inValue != pin.Value_l {
+					pins |= mask
+					pin.Value_l = inValue
+				}
+			}
 			if f.OnDigitalMessage != nil {
-				f.OnDigitalMessage(f, pins)
+				f.OnDigitalMessage(f, data.Port, pins)
 			}
 		case PIN_STATE_RESPONSE:
 			data := frame.Data.(*PinStateFrameData)
-			if data.Pin >= byte(len(f.Pins_l)) {
+			if data.Pin >= f.TotalPins {
 				return fmt.Errorf("PIN_STATE_RESPONSE pin out of index: %d", data.Pin)
 			}
-			pin := f.Pins_l[data.Pin]
-			pin.Mode = data.Mode
-			pin.State = data.State
+			pin := f.Pins[data.Pin]
+			// pin.Mode = data.Mode
+			f.handlePinMode_l(data.Pin, data.Mode)
+			if data.Mode == PIN_MODE_PULLUP && data.State != pin.State_l {
+				return fmt.Errorf("PIN_STATE_RESPONSE pin(%d) state error, got %d",
+					data.Pin, data.State)
+			}
+			pin.State_l = data.State
 			if f.OnPinState != nil {
 				f.OnPinState(f, pin)
 			}
@@ -169,31 +235,8 @@ func (f *Firmata) proccessFrame(frame *ReadFrame) (err error) {
 	return nil
 }
 
-func (f *Firmata) setDigitalPortValues(port byte, values *[8]byte) []*Pin {
-	start := 8 * int(port)
-	end := start + 8
-	if end > len(f.Pins_l) {
-		end = len(f.Pins_l)
-	}
-
-	pins := make([]*Pin, end-start)
-	ps := 0
-	for i, pin := range f.Pins_l[start:end] {
-		if pin.Mode == PIN_MODE_INPUT {
-			pin.Value = int(values[i])
-			pins[ps] = pin
-			ps++
-		}
-	}
-	return pins[:ps]
-}
-
 func (f *Firmata) Close() {
 	f.doneOnce.Do(func() {
-		for _, w := range f.reader.pipes {
-			w.Close()
-		}
-		f.reader.pipes = nil
 		f.closer.Close()
 		close(f.doneServing)
 	})

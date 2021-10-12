@@ -9,40 +9,41 @@ import (
 	"gobot.io/x/gobot/gobottest"
 )
 
-type readWriteCloser struct{}
-
-func (readWriteCloser) Write(p []byte) (int, error) {
-	writeDataMutex.Lock()
-	defer writeDataMutex.Unlock()
-	return testWriteData.Write(p)
+type readWriteCloser struct {
+	writeDataMutex sync.Mutex
+	readDataMutex  sync.Mutex
+	testReadData   []byte
+	testWriteData  bytes.Buffer
 }
 
-var writeDataMutex sync.Mutex
-var readDataMutex sync.Mutex
-var testReadData = []byte{}
-var testWriteData = bytes.Buffer{}
-
-func SetTestReadData(d []byte) {
-	readDataMutex.Lock()
-	defer readDataMutex.Unlock()
-	testReadData = d
+func (rwc *readWriteCloser) Write(p []byte) (int, error) {
+	rwc.writeDataMutex.Lock()
+	defer rwc.writeDataMutex.Unlock()
+	return rwc.testWriteData.Write(p)
 }
 
-func (readWriteCloser) Read(b []byte) (int, error) {
-	readDataMutex.Lock()
-	defer readDataMutex.Unlock()
+func setTestReadData(f *Firmata, d []byte) {
+	rwc := f.closer.(*readWriteCloser)
+	rwc.readDataMutex.Lock()
+	defer rwc.readDataMutex.Unlock()
+	rwc.testReadData = d
+}
+
+func (rwc *readWriteCloser) Read(b []byte) (int, error) {
+	rwc.readDataMutex.Lock()
+	defer rwc.readDataMutex.Unlock()
 
 	size := len(b)
-	if len(testReadData) < size {
-		size = len(testReadData)
+	if len(rwc.testReadData) < size {
+		size = len(rwc.testReadData)
 	}
-	copy(b, []byte(testReadData)[:size])
-	testReadData = testReadData[size:]
+	copy(b, []byte(rwc.testReadData)[:size])
+	rwc.testReadData = rwc.testReadData[size:]
 
 	return size, nil
 }
 
-func (readWriteCloser) Close() error {
+func (rwc *readWriteCloser) Close() error {
 	return nil
 }
 
@@ -75,6 +76,169 @@ func testAnalogMappingResponse() []byte {
 		127, 127, 127, 127, 0, 1, 2, 3, 4, 5, 247}
 }
 
+func testPinStateReply() [][]byte {
+	// mock pin state reply
+	return [][]byte{
+		// D0
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			0, PIN_MODE_IGNORE, 0,
+			END_SYSEX},
+		// D1
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			1, PIN_MODE_IGNORE, 0,
+			END_SYSEX},
+		// D2
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			2, PIN_MODE_INPUT, 1,
+			END_SYSEX},
+		// D3
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			3, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// D4
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			4, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// D5
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			5, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// D6
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			6, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// D7
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			7, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// D8
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			8, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// D9
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			9, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// D10
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			10, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// D11
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			11, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// D12
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			12, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// D13
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			13, PIN_MODE_OUTPUT, 1,
+			END_SYSEX},
+		// A0
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			14, PIN_MODE_ANALOG, 1,
+			END_SYSEX},
+		// A1
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			15, PIN_MODE_ANALOG, 1,
+			END_SYSEX},
+		// A2
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			16, PIN_MODE_ANALOG, 1,
+			END_SYSEX},
+		// A3
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			17, PIN_MODE_ANALOG, 1,
+			END_SYSEX},
+		// A4
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			18, PIN_MODE_ANALOG, 1,
+			END_SYSEX},
+		// A5
+		{START_SYSEX, PIN_STATE_RESPONSE,
+			19, PIN_MODE_ANALOG, 1,
+			END_SYSEX},
+	}
+}
+
+var testPinNames = [20]PinName{
+	PB9,  //D0
+	PB8,  //D1
+	PB7,  //D2
+	PB6,  //D3
+	PB5,  //D4
+	PB4,  //D5
+	PB3,  //D6
+	PA15, //D7
+	PA12, //D8
+	PA11, //D9
+	PA10, //D10
+	PA9,  //D11
+	PA8,  //D12
+	PB15, //D13
+	PB14, //D14
+	PB13, //D15
+	PB12, //D16
+	PC13, //D17
+	PC14, //D18
+	PC15, //D19
+}
+
+func testPinNamesReply() []byte {
+	// mock pin names reply
+	// 0  START_SYSEX                  (0xF0)
+	// 1  UD_PIN_NAMES_REPLY           (0x07)
+	// 2  pin0 PA0-PZ15(191) bits 0-6  (least significant byte)
+	// 4  pin0 PA0-PZ15(191) bits 7-13 (most significant byte)
+	// ... pin1 and more
+	// N  END_SYSEX                    (0xF7)
+	return []byte{
+		START_SYSEX, UD_PIN_NAMES_REPLY,
+		// PB9  //D0
+		byte(PB9) & 0x7F, byte(PB9) >> 7,
+		// PB8  //D1
+		byte(PB8) & 0x7F, byte(PB8) >> 7,
+		// PB7  //D2
+		byte(PB7) & 0x7F, byte(PB7) >> 7,
+		// PB6  //D3
+		byte(PB6) & 0x7F, byte(PB6) >> 7,
+		// PB5  //D4
+		byte(PB5) & 0x7F, byte(PB5) >> 7,
+		// PB4  //D5
+		byte(PB4) & 0x7F, byte(PB4) >> 7,
+		// PB3  //D6
+		byte(PB3) & 0x7F, byte(PB3) >> 7,
+		// PA15 //D7
+		byte(PA15) & 0x7F, byte(PA15) >> 7,
+		// PA12 //D8
+		byte(PA12) & 0x7F, byte(PA12) >> 7,
+		// PA11 //D9
+		byte(PA11) & 0x7F, byte(PA11) >> 7,
+		// PA10 //D10
+		byte(PA10) & 0x7F, byte(PA10) >> 7,
+		// PA9  //D11
+		byte(PA9) & 0x7F, byte(PA9) >> 7,
+		// PA8  //D12
+		byte(PA8) & 0x7F, byte(PA8) >> 7,
+		// PB15 //D13
+		byte(PB15) & 0x7F, byte(PB15) >> 7,
+		// PB14 //A0
+		byte(PB14) & 0x7F, byte(PB14) >> 7,
+		// PB13 //A1
+		byte(PB13) & 0x7F, byte(PB13) >> 7,
+		// PB12 //A2
+		byte(PB12) & 0x7F, byte(PB12) >> 7,
+		// PC13 //A3
+		byte(PC13) & 0x7F, byte(PC13) >> 7,
+		// PC14 //A4
+		byte(PC14) & 0x7F, byte(PC14) >> 7,
+		// PC15 //A5
+		byte(PC15) & 0x7F, byte(PC15) >> 7,
+		END_SYSEX,
+	}
+}
+
 func processFrame(f *Firmata) error {
 	frame, err := f.reader.ReadFrame()
 	if err != nil {
@@ -84,15 +248,19 @@ func processFrame(f *Firmata) error {
 }
 
 func initTestFirmata() (*Firmata, error) {
-	f := NewFirmata(readWriteCloser{})
+	f := NewFirmata(new(readWriteCloser))
 
-	for _, fn := range []func() []byte{
-		testProtocolResponse,
-		testFirmwareResponse,
-		testCapabilitiesResponse,
-		testAnalogMappingResponse,
-	} {
-		SetTestReadData(fn())
+	bss := [][]byte{
+		testProtocolResponse(),
+		testFirmwareResponse(),
+		testCapabilitiesResponse(),
+		testAnalogMappingResponse(),
+	}
+	bss = append(bss, testPinStateReply()...)
+	bss = append(bss, testPinNamesReply())
+
+	for _, s := range bss {
+		setTestReadData(f, s)
 		frame, err := f.reader.ReadFrame()
 		if err != nil {
 			return nil, err
@@ -115,23 +283,29 @@ func TestInit(t *testing.T) {
 	gobottest.Assert(t, b.ProtocolVersion.Server.Name, "v2.3")
 	gobottest.Assert(t, b.FirmwareVersion.Server.Name, "v2.3")
 	gobottest.Assert(t, string(b.FirmwareName), "StandardFirmata.ino")
-	gobottest.Assert(t, len(b.Pins_l), 20)
-	gobottest.Assert(t, len(b.AnalogPins_l), 6)
+	gobottest.Assert(t, b.TotalPorts, byte(3))
+	gobottest.Assert(t, b.TotalPins, byte(20))
+	gobottest.Assert(t, b.TotalAnalogPins, byte(6))
+	gobottest.Assert(t, b.PortConfigInputs, [16]byte{0b00000100})
+
+	for n, d := range b.DxByName {
+		gobottest.Assert(t, n, b.Pins[d].Name)
+	}
 }
 
 func TestReportVersion(t *testing.T) {
 	b, _ := initTestFirmata()
 	//test if functions executes
-	gobottest.Assert(t, b.reportVersion(), nil)
+	gobottest.Assert(t, b.reportInit_l(), nil)
 }
 
 func TestProcessAnalogRead0(t *testing.T) {
 	b, _ := initTestFirmata()
-	SetTestReadData([]byte{0xE0, 0x23, 0x05})
+	setTestReadData(b, []byte{0xE0, 0x23, 0x05})
 
 	sem := make(chan bool, 1)
 	b.OnAnalogMessage = func(f *Firmata, pin *Pin) {
-		gobottest.Assert(t, pin.Value, 675)
+		gobottest.Assert(t, pin.Value_l, 675)
 		sem <- true
 	}
 
@@ -149,11 +323,11 @@ func TestProcessAnalogRead0(t *testing.T) {
 
 func TestProcessAnalogRead1(t *testing.T) {
 	b, _ := initTestFirmata()
-	SetTestReadData([]byte{0xE1, 0x23, 0x06})
+	setTestReadData(b, []byte{0xE1, 0x23, 0x06})
 
 	sem := make(chan bool, 1)
 	b.OnAnalogMessage = func(f *Firmata, pin *Pin) {
-		gobottest.Assert(t, pin.Value, 803)
+		gobottest.Assert(t, pin.Value_l, 803)
 		sem <- true
 	}
 
@@ -171,14 +345,14 @@ func TestProcessAnalogRead1(t *testing.T) {
 
 func TestProcessDigitalRead2(t *testing.T) {
 	b, _ := initTestFirmata()
-	b.Pins_l[2].Mode = PIN_MODE_INPUT
-	SetTestReadData([]byte{0x90, 0x04, 0x00})
+	b.handlePinMode_l(2, PIN_MODE_INPUT)
+	setTestReadData(b, []byte{0x90, 0x04, 0x00})
 
 	sem := make(chan bool, 1)
-	b.OnDigitalMessage = func(f *Firmata, pins []*Pin) {
-		gobottest.Assert(t, len(pins), 1)
-		gobottest.Assert(t, pins[0].ID, byte(2))
-		gobottest.Assert(t, pins[0].Value, 1)
+	b.OnDigitalMessage = func(f *Firmata, port byte, pins byte) {
+		gobottest.Assert(t, port, byte(0))
+		gobottest.Assert(t, pins, byte(0b00000100))
+		gobottest.Assert(t, f.Pins[2].Value_l, 1)
 		sem <- true
 	}
 
@@ -196,14 +370,14 @@ func TestProcessDigitalRead2(t *testing.T) {
 
 func TestProcessDigitalRead4(t *testing.T) {
 	b, _ := initTestFirmata()
-	b.Pins_l[4].Mode = PIN_MODE_INPUT
-	SetTestReadData([]byte{0x90, 0x16, 0x00})
+	b.handlePinMode_l(4, PIN_MODE_INPUT)
+	setTestReadData(b, []byte{DIGITAL_MESSAGE, 0b00010000, 0x00})
 
 	sem := make(chan bool, 1)
-	b.OnDigitalMessage = func(f *Firmata, pins []*Pin) {
-		gobottest.Assert(t, len(pins), 1)
-		gobottest.Assert(t, pins[0].ID, byte(4))
-		gobottest.Assert(t, pins[0].Value, 1)
+	b.OnDigitalMessage = func(f *Firmata, port byte, pins byte) {
+		gobottest.Assert(t, port, byte(0))
+		gobottest.Assert(t, pins, byte(0b00010000))
+		gobottest.Assert(t, f.Pins[4].Value_l, 1)
 		sem <- true
 	}
 
@@ -221,8 +395,8 @@ func TestProcessDigitalRead4(t *testing.T) {
 
 func TestDigitalWrite(t *testing.T) {
 	b, _ := initTestFirmata()
-	values := [8]byte{1, 1, 1, 1, 0, 0, 0, 0}
-	gobottest.Assert(t, b.DigitalWrite_l(2, &values), nil)
+	_, err := b.DigitalWrite_l(2, 0b00001111)
+	gobottest.Assert(t, err, nil)
 }
 
 func TestSetPinMode(t *testing.T) {
@@ -243,21 +417,22 @@ func TestReportAnalog(t *testing.T) {
 
 func TestProcessPinState13(t *testing.T) {
 	b, _ := initTestFirmata()
-	SetTestReadData([]byte{240, 110, 13, 1, 1, 247})
+	setTestReadData(b, []byte{240, 110, 13, 1, 1, 247})
 
 	sem := make(chan bool, 1)
 	b.OnPinState = func(f *Firmata, pin *Pin) {
 		gobottest.Assert(t, *pin, Pin{
-			ID: 13,
+			Dx:   13,
+			Name: PB15,
 			Modes: map[byte]byte{
 				0: 127,
 				1: 1,
 				4: 1,
 			},
-			Mode:          1,
-			Value:         0,
-			State:         1,
-			AnalogChannel: 127,
+			Mode_l:  1,
+			Value_l: 0,
+			State_l: 1,
+			Ax:      127,
 		})
 		sem <- true
 	}
@@ -291,7 +466,7 @@ func TestI2cRead(t *testing.T) {
 
 func TestProcessI2cReply(t *testing.T) {
 	b, _ := initTestFirmata()
-	SetTestReadData([]byte{240, 119, 9, 0, 0, 0, 24, 1, 1, 0, 26, 1, 247})
+	setTestReadData(b, []byte{240, 119, 9, 0, 0, 0, 24, 1, 1, 0, 26, 1, 247})
 
 	sem := make(chan bool, 1)
 	b.OnI2cReply = func(f *Firmata, reply *I2cReply) {
@@ -317,7 +492,9 @@ func TestProcessI2cReply(t *testing.T) {
 
 func TestProcessStringData(t *testing.T) {
 	b, _ := initTestFirmata()
-	SetTestReadData(append([]byte{240, 0x71}, append([]byte("Hello Firmata!"), 247)...))
+	setTestReadData(b,
+		append([]byte{240, 0x71},
+			append(To14bits([]byte("Hello Firmata!")), 247)...))
 
 	sem := make(chan bool, 1)
 	b.OnStringData = func(f *Firmata, buf []byte) {
@@ -363,21 +540,23 @@ func TestServoConfig(t *testing.T) {
 		},
 	}
 
+	rwc := b.closer.(*readWriteCloser)
+
 	for _, test := range tests {
-		writeDataMutex.Lock()
-		testWriteData.Reset()
-		writeDataMutex.Unlock()
+		rwc.writeDataMutex.Lock()
+		rwc.testWriteData.Reset()
+		rwc.writeDataMutex.Unlock()
 		err := b.ServoConfig_l(byte(test.arguments[0]), test.arguments[1], test.arguments[2])
-		writeDataMutex.Lock()
-		gobottest.Assert(t, testWriteData.Bytes(), test.expected)
+		rwc.writeDataMutex.Lock()
+		gobottest.Assert(t, rwc.testWriteData.Bytes(), test.expected)
 		gobottest.Assert(t, err, test.result)
-		writeDataMutex.Unlock()
+		rwc.writeDataMutex.Unlock()
 	}
 }
 
 func TestProcessSysexData(t *testing.T) {
 	b, _ := initTestFirmata()
-	SetTestReadData([]byte{240, 17, 1, 2, 3, 247})
+	setTestReadData(b, []byte{240, 17, 1, 2, 3, 247})
 
 	sem := make(chan bool, 1)
 	b.OnSysexResponse = func(f *Firmata, buf []byte) {
