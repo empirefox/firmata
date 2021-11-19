@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package empirefox.firmata;
+
+option go_package = "github.com/empirefox/firmata/pkg/pb;pb";
+
+import "empirefox/firmata/pinname.proto";
+
+message NonGpio {
+  uint32 physicalId = 1;
+  empirefox.firmata.PinName name = 2;
+}
+
+message CommonHeader {
+  // name is the header name, eg J1, J2 or any other name.
+  string name = 1;
+  // totalPhysical is physical pin numbers.
+  uint32 totalPhysical = 2;
+  // firstGpioName is the first physical gpio pin name.
+  empirefox.firmata.PinName firstGpioName = 3;
+  // NonGpios place 3V3, GND or other non-gpio pins.
+  repeated NonGpio nonGpios = 6;
+}
+
+message SingleRowHeader {
+  CommonHeader left = 1;
+  CommonHeader right = 2;
+}
+
+message Header {
+  oneof is {
+    SingleRowHeader singleRow = 1;
+    CommonHeader doubleRows = 2;
+  }
+}
+
+message Board {
+  // unique id of the board.
+  string id = 1;
+  string vendor = 2;
+  string product = 3;
+  string color = 4;
+  string version = 5;
+  string mcu = 6;
+  // in mm
+  uint32 length = 7;
+  // in mm
+  uint32 width = 8;
+  // in mm
+  uint32 height = 9;
+  string desc = 10;
+  // in mV
+  uint32 workingVoltage = 11;
+  // in mV
+  uint32 supplyVoltage = 12;
+  string officialURL = 13;
+  repeated string tags = 16;
+  repeated Header headers = 17;
+}
+
+message Module {
+  string id = 1;
+  string vendor = 2;
+  string product = 3;
+  string color = 4;
+  string version = 5;
+  // in mm
+  uint32 length = 7;
+  // in mm
+  uint32 width = 8;
+  // in mm
+  uint32 height = 9;
+  string desc = 10;
+  // in mV
+  uint32 supplyVoltage = 12;
+  string officialURL = 13;
+  repeated string tags = 16;
+}

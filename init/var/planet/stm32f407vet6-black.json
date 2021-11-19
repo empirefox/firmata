@@ -1,0 +1,123 @@
+{
+    "$schema": "./schema/Board.json",
+    "id": "stm32f407vet6-black",
+    "vendor": "",
+    "product": "",
+    "color": "black",
+    "version": "",
+    "mcu": "stm32f407vet6",
+    "length": 85,
+    "width": 72,
+    "height": 0,
+    "desc": "",
+    "workingVoltage": 3300,
+    "supplyVoltage": 5000,
+    "officialURL": "https://www.st.com/zh/microcontrollers-microprocessors/stm32f407-417.html",
+    "tags": [
+        "stm32"
+    ],
+    "headers": [
+        {
+            "singleRow": {
+                "left": {
+                    "name": "J2",
+                    "totalPhysical": 48,
+                    "firstGpioName": "PE2",
+                    "nonGpios": [
+                        {
+                            "physicalId": 1,
+                            "name": "P_5V"
+                        },
+                        {
+                            "physicalId": 2,
+                            "name": "P_5V"
+                        },
+                        {
+                            "physicalId": 3,
+                            "name": "P_5V"
+                        },
+                        {
+                            "physicalId": 5,
+                            "name": "P_3V3"
+                        },
+                        {
+                            "physicalId": 6,
+                            "name": "P_3V3"
+                        },
+                        {
+                            "physicalId": 7,
+                            "name": "P_3V3"
+                        },
+                        {
+                            "physicalId": 8,
+                            "name": "P_3V3"
+                        },
+                        {
+                            "physicalId": 9,
+                            "name": "P_GND"
+                        },
+                        {
+                            "physicalId": 10,
+                            "name": "P_GND"
+                        },
+                        {
+                            "physicalId": 21,
+                            "name": "P_VREF_N"
+                        },
+                        {
+                            "physicalId": 22,
+                            "name": "P_VREF_P"
+                        }
+                    ]
+                },
+                "right": {
+                    "name": "J3",
+                    "totalPhysical": 48,
+                    "firstGpioName": "PE1",
+                    "nonGpios": [
+                        {
+                            "physicalId": 1,
+                            "name": "P_3V3"
+                        },
+                        {
+                            "physicalId": 2,
+                            "name": "P_3V3"
+                        },
+                        {
+                            "physicalId": 3,
+                            "name": "P_3V3"
+                        },
+                        {
+                            "physicalId": 4,
+                            "name": "P_3V3"
+                        },
+                        {
+                            "physicalId": 5,
+                            "name": "P_BOOT0"
+                        },
+                        {
+                            "physicalId": 6,
+                            "name": "P_BOOT1"
+                        },
+                        {
+                            "physicalId": 7,
+                            "name": "P_GND"
+                        },
+                        {
+                            "physicalId": 8,
+                            "name": "P_GND"
+                        },
+                        {
+                            "physicalId": 9,
+                            "name": "P_GND"
+                        },
+                        {
+                            "physicalId": 10,
+                            "name": "P_GND"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

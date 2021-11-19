@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package empirefox.firmata;
+
+option go_package = "github.com/empirefox/firmata/pkg/pb;pb";
+
+enum Mode {
+  // INPUT is defined in Arduino.h, but may conflict with other uses
+  INPUT = 0x00;
+  // OUTPUT is defined in Arduino.h. Careful: OUTPUT is defined as 2 on ESP32!
+  // therefore OUTPUT and OUTPU not the same!
+  OUTPUT = 0x01;
+  // analog pin in analogInput mode
+  ANALOG = 0x02;
+  // digital pin in PWM output mode
+  PWM = 0x03;
+  // digital pin in Servo output mode
+  SERVO = 0x04;
+  // shiftIn/shiftOut mode
+  SHIFT = 0x05;
+  // pin included in I2C setup
+  I2C = 0x06;
+  // pin configured for 1-wire
+  ONEWIRE = 0x07;
+  // pin configured for stepper motor
+  STEPPER = 0x08;
+  // pin configured for rotary encoders
+  ENCODER = 0x09;
+  // pin configured for serial communication
+  SERIAL = 0x0A;
+  // enable internal pull-up resistor for pin
+  PULLUP = 0x0B;
+
+  // Extensions under development
+
+  // pin configured for SPI
+  SPI = 0x0C;
+  // pin configured for HC-SR04
+  SONAR = 0x0D;
+  // pin configured for tone
+  TONE = 0x0E;
+  // pin configured for DHT
+  DHT = 0x0F;
+  // pin configured for frequency measurement
+  FREQUENCY = 0x10;
+  // pin configured to be ignored by digitalWrite and capabilityResponse
+  IGNORE = 0x7F;
+}
+
+message SimpleMode {
+  enum List {
+    // INPUT is defined in Arduino.h, but may conflict with other uses
+    I = 0x00;
+    // OUTPUT is defined in Arduino.h. Careful: OUTPUT is defined as 2 on ESP32!
+    // therefore OUTPUT and OUTPU not the same!
+    O = 0x01;
+    // analog pin in analogInput mode
+    A = 0x02;
+    // digital pin in PWM output mode
+    PWM = 0x03;
+    // digital pin in Servo output mode
+    SERVO = 0x04;
+    // shiftIn/shiftOut mode
+    IxO = 0x05;
+    // pin included in I2C setup
+    I2C = 0x06;
+    // pin configured for 1-wire
+    W1 = 0x07;
+    // pin configured for stepper motor
+    SM = 0x08;
+    // pin configured for rotary encoders
+    RE = 0x09;
+    // pin configured for serial communication
+    UART = 0x0A;
+    // enable internal pull-up resistor for pin
+    PU = 0x0B;
+
+    // Extensions under development
+
+    // pin configured for SPI
+    SPI = 0x0C;
+    // pin configured for HC-SR04
+    SONAR = 0x0D;
+    // pin configured for tone
+    TONE = 0x0E;
+    // pin configured for DHT
+    DHT = 0x0F;
+    // pin configured for frequency measurement
+    FREQ = 0x10;
+    // pin configured to be ignored by digitalWrite and capabilityResponse
+    X = 0x7F;
+  }
+}

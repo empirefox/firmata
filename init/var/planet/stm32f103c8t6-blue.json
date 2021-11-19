@@ -1,0 +1,71 @@
+{
+    "$schema": "./schema/Board.json",
+    "id": "stm32f103c8t6-blue",
+    "vendor": "",
+    "product": "",
+    "color": "blue",
+    "version": "",
+    "mcu": "stm32f103c8t6",
+    "length": 53,
+    "width": 22,
+    "height": 0,
+    "desc": "",
+    "workingVoltage": 3300,
+    "supplyVoltage": 5000,
+    "officialURL": "https://www.st.com/en/microcontrollers-microprocessors/stm32f103c8.html",
+    "tags": [
+        "stm32"
+    ],
+    "headers": [
+        {
+            "singleRow": {
+                "left": {
+                    "name": "P3",
+                    "totalPhysical": 20,
+                    "firstGpioName": "PC13",
+                    "nonGpios": [
+                        {
+                            "physicalId": 1,
+                            "name": "P_VBAT"
+                        },
+                        {
+                            "physicalId": 17,
+                            "name": "P_RESET"
+                        },
+                        {
+                            "physicalId": 18,
+                            "name": "P_3V3"
+                        },
+                        {
+                            "physicalId": 19,
+                            "name": "P_GND"
+                        },
+                        {
+                            "physicalId": 20,
+                            "name": "P_GND"
+                        }
+                    ]
+                },
+                "right": {
+                    "name": "P4",
+                    "totalPhysical": 20,
+                    "firstGpioName": "PB9",
+                    "nonGpios": [
+                        {
+                            "physicalId": 1,
+                            "name": "P_3V3"
+                        },
+                        {
+                            "physicalId": 2,
+                            "name": "P_GND"
+                        },
+                        {
+                            "physicalId": 3,
+                            "name": "P_5V"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

@@ -1,0 +1,55 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/Module",
+    "definitions": {
+        "Module": {
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "vendor": {
+                    "type": "string"
+                },
+                "product": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "length": {
+                    "type": "integer",
+                    "description": "in mm"
+                },
+                "width": {
+                    "type": "integer",
+                    "description": "in mm"
+                },
+                "height": {
+                    "type": "integer",
+                    "description": "in mm"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "supplyVoltage": {
+                    "type": "integer",
+                    "description": "in mV"
+                },
+                "officialURL": {
+                    "type": "string"
+                },
+                "tags": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object"
+        }
+    }
+}

@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package empirefox.firmata;
+
+option go_package = "github.com/empirefox/firmata/pkg/pb;pb";
+
+import "empirefox/firmata/mode.proto";
+import "empirefox/firmata/pinname.proto";
+
+message Config {
+  string nick = 1;
+  PinColumnFilter columnFilter = 2;
+  ModeColor modeColor = 3;
+  repeated Group groups = 4;
+}
+
+message PinColumnFilter {
+  bool dx = 1;
+  bool ax = 2;
+  bool name = 3;
+  bool modes = 4;
+  bool mode = 5;
+  bool value = 6;
+  bool state = 7;
+}
+
+message ModeColor {
+  string INPUT = 1;
+  string OUTPUT = 2;
+  string ANALOG = 3;
+  string PWM = 4;
+  string SERVO = 5;
+  string SHIFT = 6;
+  string I2C = 7;
+  string ONEWIRE = 8;
+  string STEPPER = 9;
+  string ENCODER = 10;
+  string SERIAL = 11;
+  string PULLUP = 12;
+
+  // Extensions under development
+
+  string SPI = 13;
+  string SONAR = 14;
+  string TONE = 15;
+  string DHT = 16;
+  string FREQUENCY = 17;
+  string IGNORE = 18;
+}
+
+message Group {
+  string name = 1;
+  string desc = 2;
+  repeated Pin pins = 3;
+
+  message Pin {
+    string firmata = 1;
+    // computed only
+    uint32 firmataIndex = 2;
+    string nick = 3;
+    string desc = 4;
+    empirefox.firmata.Mode mode = 5;
+    bool mutableMode = 6;
+    int32 value = 7;
+    repeated string tags = 8;
+
+    oneof id {
+      empirefox.firmata.PinName gpioName = 11;
+      uint32 dx = 12;
+      uint32 ax = 13;
+    }
+
+    oneof type {
+      Button button = 20;
+      Switch switch = 21;
+      NumberWriter numberWriter = 22;
+      DigitalReader digitalReader = 23;
+      NumberReader numberReader = 24;
+      bool hide = 25;
+    }
+  }
+
+  // always one-directional trigger in ms, does not remember previus state
+  message Button {
+    bool lowLevelTrigger = 1;
+    // zero means set by client, computed triggerMs is required
+    uint32 triggerMs = 2;
+  }
+
+  // switch high/low
+  message Switch {
+    bool lowLevelTrigger = 1;
+    // triggerMs>0, act like Button, but can detect status if exist
+    // triggerMs=0, triggered=!triggered, use SetPinValue
+    uint32 triggerMs = 2;
+    // if not set, switch action is auto done
+    DigitalInputPin detect = 4;
+  }
+
+  message NumberWriter {
+    uint32 min = 1;
+    uint32 max = 2;
+    uint32 step = 3;
+    optional uint32 recommend = 4;
+  }
+
+  message DigitalReader {
+    bool lowLevelTrigger = 2;
+    bool alarm = 3;
+  }
+
+  message NumberReader {
+    bool lowLevelTrigger = 2;
+    uint32 veryHighThreshold = 3;
+    uint32 littleHighThreshold = 4;
+    uint32 littleLowThreshold = 5;
+    uint32 veryLowThreshold = 6;
+  }
+
+  // listen OnDigitalMessage
+  message DigitalInputPin {
+    string firmata = 1;
+    // computed only
+    uint32 firmataIndex = 2;
+    bool lowLevelTrigger = 3;
+    oneof id {
+      empirefox.firmata.PinName gpioName = 4;
+      uint32 dx = 5;
+      uint32 ax = 6;
+    }
+  }
+}

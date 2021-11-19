@@ -1,0 +1,47 @@
+name: monolith
+version: 1.0.0+1
+publish_to: none
+description: Remote controll firmata.
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+
+dependencies:
+  cupertino_icons: ^1.0.2
+  flutter:
+    sdk: flutter
+
+  dartx: ^0.8.0
+  flutter_about_page: ^0.0.1
+  flutter_easyloading: ^3.0.3
+  get: ^4.3.8
+  group_list_view: ^1.1.1
+  grpc: ^3.0.2
+  json_annotation: ^4.3.0
+  protobuf: ^2.0.0
+  reactive_forms: ^10.6.4
+  # reactive_forms_annotations:
+  # rounded_loading_button: ^2.0.8
+  # isar:
+  # hive: ^2.0.4
+  # hive_flutter: ^1.1.0
+  objectbox: ^1.2.0
+  objectbox_flutter_libs: ^1.2.0
+  package_info: ^2.0.2
+  reactive_advanced_switch: ^0.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^1.0.0
+  lints: ^1.0.1
+  # hive_generator: ^1.1.1
+  build_runner: ^2.1.4
+  json_serializable: ^6.0.0
+  # reactive_forms_generator:
+  objectbox_generator:
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

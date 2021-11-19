@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package empirefox.firmata;
+
+option go_package = "github.com/empirefox/firmata/pkg/pb;pb";
+
+import "empirefox/firmata/pinname.proto";
+
+message Integration {
+  repeated Firmata firmatas = 1;
+  repeated Device devices = 2;
+}
+
+message Firmata {
+  string name = 1;
+  string desc = 2;
+  string board = 3;
+  repeated Wiring.Firmata wiring = 4;
+  // tcp://x.x.x.x:xxx?timeout=2s&keep_alive=1 or
+  // serial:///dev/ttyUSB0?baud=4800&size=8&parity=N&stop_bit=1&timeout=2s or
+  // serial:///dev/serial/by-path/pci-0000:00:1a.0-usb-0:1.2:1.0-port0?baud=4800
+  // by `udevadm info /dev/ttyUSB0`
+  string dial = 5;
+  uint32 samplingMs = 6;
+}
+
+message Device {
+  string name = 1;
+  string desc = 2;
+  string module = 3;
+  repeated Wiring.Device wiring = 4;
+}
+
+message Wiring {
+  message Firmata{
+    string name = 1;
+    string desc = 2;
+    FirmataPins from = 3;
+    To to = 4;
+  }
+
+  message Device{
+    string name = 1;
+    string desc = 2;
+    DevicePins from = 3;
+    To to = 4;
+  }
+
+  message To {
+    oneof is {
+      FirmataPins firmata = 1;
+      DevicePins device = 2;
+    }
+  }
+
+  message FirmataPins {
+    string name = 1;
+    // computed only
+    uint32 firmataIndex = 2;
+    string desc = 3;
+
+    oneof first {
+      empirefox.firmata.PinName gpioName = 5;
+      uint32 dx = 6;
+      uint32 ax = 7;
+    }
+
+    oneof slice {
+      empirefox.firmata.PinName lastGpioName = 10;
+      uint32 lastDx = 11;
+      uint32 lastAx = 12;
+    }
+  }
+
+  message DevicePins {
+    string name = 1;
+    string desc = 3;
+    string first = 4;
+    string last = 5;
+  }
+}

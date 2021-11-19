@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+// version=0.0.1
+package empirefox.firmata;
+
+option go_package = "github.com/empirefox/firmata/pkg/pb;pb";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+import "empirefox/firmata/board.proto";
+import "empirefox/firmata/config.proto";
+import "empirefox/firmata/instance.proto";
+import "empirefox/firmata/integration.proto";
+import "empirefox/firmata/mode.proto";
+
+message FirmataIndex { uint32 firmata = 1; }
+
+message ServerMessage {
+  oneof type {
+    Instance connected = 1;
+    uint32 disconnected = 2;
+    Digital digital = 3;
+    Analog analog = 4;
+  }
+
+  message Digital {
+    uint32 firmata = 1;
+    uint32 port = 2;
+    uint32 pins = 3;
+    uint32 values = 4;
+  }
+
+  message Analog {
+    uint32 firmata = 1;
+    uint32 pin = 2;
+    uint32 value = 3;
+  }
+}
+
+message BoardsResponse { repeated Board boards = 1; }
+
+message SetPinModeRequest {
+  uint32 firmata = 1;
+  uint32 dx = 2;
+  empirefox.firmata.Mode mode = 3;
+}
+
+// only for Button and Switch
+message TriggerDigitalPinRequest {
+  uint32 group = 1;
+  uint32 gpin = 2;
+  uint32 realtimeTriggerMs = 3;
+}
+
+message SetPinValueRequest {
+  uint32 group = 1;
+  uint32 gpin = 2;
+  uint32 value = 3;
+}
+
+message WriteStringRequest {
+  uint32 firmata = 1;
+  string data = 2;
+}
+
+message SetSamplingIntervalRequest {
+  uint32 firmata = 1;
+  uint32 ms = 2;
+}
+
+message ReportDigitalRequest {
+  uint32 firmata = 1;
+  uint32 port = 2;
+  bool enable = 3;
+}
+
+message ReportAnalogRequest {
+  uint32 firmata = 1;
+  uint32 pin = 2;
+  bool enable = 3;
+}
+
+service Transport {
+  rpc GetApiVersion(google.protobuf.Empty) returns (Version.Peer);
+
+  rpc ListBoards(google.protobuf.Empty) returns (BoardsResponse);
+  rpc GetBoard(google.protobuf.StringValue) returns (Board);
+
+  rpc GetIntegration(google.protobuf.Empty) returns (Integration);
+  rpc GetConfig(google.protobuf.Empty) returns (Config);
+
+  rpc OnServerMessage(google.protobuf.Empty) returns (stream ServerMessage);
+
+  rpc Connect(FirmataIndex) returns (google.protobuf.Empty);
+  rpc Disconnect(FirmataIndex) returns (google.protobuf.Empty);
+
+  rpc SetPinMode(SetPinModeRequest) returns (google.protobuf.Empty);
+
+  rpc TriggerDigitalPin(TriggerDigitalPinRequest)
+      returns (google.protobuf.Empty);
+  rpc SetPinValue(SetPinValueRequest) returns (google.protobuf.Empty);
+
+  rpc ReportDigital(ReportDigitalRequest) returns (google.protobuf.Empty);
+  rpc ReportAnalog(ReportAnalogRequest) returns (google.protobuf.Empty);
+
+  rpc WriteString(WriteStringRequest) returns (google.protobuf.Empty);
+  rpc SetSamplingInterval(SetSamplingIntervalRequest)
+      returns (google.protobuf.Empty);
+}

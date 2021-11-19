@@ -1,0 +1,67 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/ModeColor",
+    "definitions": {
+        "ModeColor": {
+            "properties": {
+                "INPUT": {
+                    "type": "string"
+                },
+                "OUTPUT": {
+                    "type": "string"
+                },
+                "ANALOG": {
+                    "type": "string"
+                },
+                "PWM": {
+                    "type": "string"
+                },
+                "SERVO": {
+                    "type": "string"
+                },
+                "SHIFT": {
+                    "type": "string"
+                },
+                "I2C": {
+                    "type": "string"
+                },
+                "ONEWIRE": {
+                    "type": "string"
+                },
+                "STEPPER": {
+                    "type": "string"
+                },
+                "ENCODER": {
+                    "type": "string"
+                },
+                "SERIAL": {
+                    "type": "string"
+                },
+                "PULLUP": {
+                    "type": "string"
+                },
+                "SPI": {
+                    "type": "string",
+                    "description": "Extensions under development"
+                },
+                "SONAR": {
+                    "type": "string"
+                },
+                "TONE": {
+                    "type": "string"
+                },
+                "DHT": {
+                    "type": "string"
+                },
+                "FREQUENCY": {
+                    "type": "string"
+                },
+                "IGNORE": {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object"
+        }
+    }
+}

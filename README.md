@@ -1,4 +1,6 @@
-# Part implements of Firmata
+# Part implements of Firmata remote control
+
+**Not tested yet!!!**
 
 ## Add to `ConfigurableFirmata.ino`
 

@@ -1,0 +1,163 @@
+{
+    "$schema": "./schema/Config.json",
+    "columnFilter": {
+        "dx": true,
+        "ax": true,
+        "name": true,
+        "modes": true,
+        "mode": true,
+        "value": true,
+        "state": true
+    },
+    "modeColor": {
+        "INPUT": "Fuchsia",
+        "OUTPUT": "BlueViolet",
+        "ANALOG": "Aquamarine",
+        "PWM": "Aqua",
+        "SERVO": "BurlyWood",
+        "SHIFT": "Brown",
+        "I2C": "DarkGreen",
+        "ONEWIRE": "DarkKhaki",
+        "STEPPER": "DarkRed",
+        "ENCODER": "DodgerBlue",
+        "SERIAL": "DarkBlue",
+        "PULLUP": "Indigo",
+        "SPI": "LimeGreen",
+        "SONAR": "Olive",
+        "TONE": "PaleVioletRed",
+        "DHT": "SaddleBrown",
+        "FREQUENCY": "Teal",
+        "IGNORE": "Gray"
+    },
+    "groups": [
+        {
+            "name": "ktv",
+            "pins": [
+                {
+                    "nick": "headphone1",
+                    "firmata": "5v.power.controller",
+                    "gpioName": "PA0",
+                    "mode": "OUTPUT",
+                    "mutableMode": false,
+                    "value": 0,
+                    "tags": [
+                        "ktv",
+                        "headphone"
+                    ],
+                    "button": {
+                        "lowLevelTrigger": false,
+                        "triggerMs": 800,
+                        "realtime": false
+                    }
+                },
+                {
+                    "nick": "headphone2",
+                    "firmata": "5v.power.controller",
+                    "gpioName": "PA1",
+                    "mode": "OUTPUT",
+                    "mutableMode": false,
+                    "value": 0,
+                    "tags": [
+                        "ktv",
+                        "headphone"
+                    ],
+                    "button": {
+                        "lowLevelTrigger": false,
+                        "triggerMs": 800,
+                        "realtime": false
+                    }
+                },
+                {
+                    "nick": "headphone3",
+                    "firmata": "5v.power.controller",
+                    "gpioName": "PA2",
+                    "mode": "OUTPUT",
+                    "mutableMode": false,
+                    "value": 0,
+                    "tags": [
+                        "ktv",
+                        "headphone"
+                    ],
+                    "button": {
+                        "lowLevelTrigger": false,
+                        "triggerMs": 800,
+                        "realtime": false
+                    }
+                },
+                {
+                    "nick": "audio: mixer to headphones",
+                    "desc": "mixer send audio to headphones",
+                    "firmata": "5v.power.controller",
+                    "gpioName": "PA3",
+                    "mode": "OUTPUT",
+                    "mutableMode": false,
+                    "value": 0,
+                    "tags": [
+                        "ktv",
+                        "audio",
+                        "headphone"
+                    ],
+                    "button": {
+                        "lowLevelTrigger": false,
+                        "triggerMs": 1000
+                    }
+                },
+                {
+                    "nick": "audio: mixer from tv",
+                    "desc": "mixer recieve audio from tv",
+                    "firmata": "5v.power.controller",
+                    "gpioName": "PA4",
+                    "mode": "OUTPUT",
+                    "mutableMode": false,
+                    "value": 0,
+                    "tags": [
+                        "ktv",
+                        "audio",
+                        "tv"
+                    ],
+                    "button": {
+                        "lowLevelTrigger": false,
+                        "triggerMs": 1000
+                    }
+                },
+                {
+                    "nick": "audio: tv to mixer",
+                    "desc": "tv send audio to mixer",
+                    "firmata": "5v.power.controller",
+                    "gpioName": "PA5",
+                    "mode": "OUTPUT",
+                    "mutableMode": false,
+                    "value": 0,
+                    "tags": [
+                        "ktv",
+                        "audio",
+                        "tv"
+                    ],
+                    "button": {
+                        "lowLevelTrigger": false,
+                        "triggerMs": 1000
+                    }
+                }
+            ]
+        },
+        {
+            "name": "opi",
+            "pins": [
+                {
+                    "nick": "opi prime",
+                    "firmata": "5v.power.controller",
+                    "gpioName": "PA6",
+                    "mode": "OUTPUT",
+                    "mutableMode": false,
+                    "value": 0,
+                    "tags": [
+                        "opi"
+                    ],
+                    "switch": {
+                        "lowLevelTrigger": false
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,60 @@
+{
+    "$schema": "./schema/Integration.json",
+    "firmatas": [
+        {
+            "name": "5v.power.controller",
+            "desc": "Control the power for rpi/opi or other 5v devices",
+            "board": "stm32f103c8t6-blue",
+            "dial": "serial:///dev/serial/by-path/pci-0000:00:1a.0-usb-0:1.2:1.0-port0?baud=4800&timeout=2s",
+            "wiring": [
+                {
+                    "name": "signals",
+                    "desc": "use all analog pins as signals out pins",
+                    "from": {
+                        "name": "analog-pins",
+                        "desc": "PA8 is OE",
+                        "gpioName": "PA0",
+                        "lastGpioName": "PA8"
+                    },
+                    "to": {
+                        "device": {
+                            "name": "3v3-5v",
+                            "desc": "VCCA",
+                            "first": "A1",
+                            "last": "OE"
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "devices": [
+        {
+            "name": "3v3-5v",
+            "desc": "VCCA: 1.2V-3.6V, VCCB: 1.65V-5.5V",
+            "module": "TXS0108E",
+            "wiring": [
+                {
+                    "name": "to.relay.5v",
+                    "from": {
+                        "name": "VCCB",
+                        "first": "B1",
+                        "last": "B8"
+                    },
+                    "to": {
+                        "device": {
+                            "name": "relay.5v",
+                            "first": "IN1",
+                            "last": "IN8"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "relay.5v",
+            "desc": "BESTEP, 5V, Low Level Trigger",
+            "module": "8.relay.5v"
+        }
+    ]
+}

@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package empirefox.firmata;
+
+option go_package = "github.com/empirefox/firmata/pkg/pb;pb";
+
+import "empirefox/firmata/mode.proto";
+import "empirefox/firmata/pinname.proto";
+
+message Instance {
+  string firmata = 1;
+  // computed only
+  uint32 firmataIndex = 2;
+  Version protocolVersion = 3;
+  Version firmwareVersion = 4;
+  repeated Pin pins = 5;
+  bytes portConfigInputs = 6;
+
+  message Pin {
+    uint32 dx = 1;
+    uint32 ax = 2;
+    empirefox.firmata.PinName name = 3;
+    repeated SupportedMode modes = 4;
+    empirefox.firmata.Mode mode = 5;
+    uint32 value = 6;
+    uint32 state = 7;
+  }
+
+  message SupportedMode {
+    empirefox.firmata.Mode mode = 1;
+    uint32 resolution = 2;
+  }
+}
+
+message Version {
+  Peer client = 1;
+  Peer server = 2;
+  Compatible compatible = 3;
+
+  // version number lt 0 means unkown.
+  message Peer {
+    string name = 1;
+    int32 major = 2;
+    int32 minor = 3;
+    int32 bugfix = 4;
+  }
+
+  enum Compatible {
+    no = 0;
+    yes = 1;
+    same = 2;
+  }
+}

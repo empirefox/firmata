@@ -1,0 +1,109 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:1805767860837116387",
+      "lastPropertyId": "16:4055613718378871334",
+      "name": "PlanetConfig",
+      "properties": [
+        {
+          "id": "1:8716920390040972319",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:7482917749088793058",
+          "name": "host",
+          "type": 9,
+          "flags": 8,
+          "indexId": "1:2107452570768017366"
+        },
+        {
+          "id": "3:2426987980804787143",
+          "name": "port",
+          "type": 6
+        },
+        {
+          "id": "4:7225477653748570355",
+          "name": "isTlsDisabled",
+          "type": 1
+        },
+        {
+          "id": "5:2726781555754951935",
+          "name": "tlsCertificates",
+          "type": 9
+        },
+        {
+          "id": "6:7170053109147695150",
+          "name": "tlsPassword",
+          "type": 9
+        },
+        {
+          "id": "7:5504466940914669724",
+          "name": "tlsAuthority",
+          "type": 9
+        },
+        {
+          "id": "8:6343574444764212035",
+          "name": "canTlsInsecureSkipVerify",
+          "type": 1
+        },
+        {
+          "id": "9:2966628739510245268",
+          "name": "supportGrpcCodecGzip",
+          "type": 1
+        },
+        {
+          "id": "10:3348576473233977047",
+          "name": "supportGrpcCodecIdentity",
+          "type": 1
+        },
+        {
+          "id": "11:4027799160716403994",
+          "name": "tokenType",
+          "type": 9
+        },
+        {
+          "id": "12:1487743362831840029",
+          "name": "token",
+          "type": 9
+        },
+        {
+          "id": "13:2422674049177453486",
+          "name": "connectionTimeoutSeconds",
+          "type": 6
+        },
+        {
+          "id": "14:6610236115263440678",
+          "name": "idleTimeoutSeconds",
+          "type": 6
+        },
+        {
+          "id": "15:8684583559588657775",
+          "name": "callTimeoutSeconds",
+          "type": 6
+        },
+        {
+          "id": "16:4055613718378871334",
+          "name": "userAgent",
+          "type": 9
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "1:1805767860837116387",
+  "lastIndexId": "1:2107452570768017366",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [],
+  "retiredRelationUids": [],
+  "version": 1
+}

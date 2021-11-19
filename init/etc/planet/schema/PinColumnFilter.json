@@ -1,0 +1,33 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$ref": "#/definitions/PinColumnFilter",
+    "definitions": {
+        "PinColumnFilter": {
+            "properties": {
+                "dx": {
+                    "type": "boolean"
+                },
+                "ax": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "boolean"
+                },
+                "modes": {
+                    "type": "boolean"
+                },
+                "mode": {
+                    "type": "boolean"
+                },
+                "value": {
+                    "type": "boolean"
+                },
+                "state": {
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object"
+        }
+    }
+}
