@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:1805767860837116387",
-      "lastPropertyId": "16:4055613718378871334",
+      "lastPropertyId": "17:353780544430825407",
       "name": "PlanetConfig",
       "properties": [
         {
@@ -90,13 +90,20 @@
           "id": "16:4055613718378871334",
           "name": "userAgent",
           "type": 9
+        },
+        {
+          "id": "17:353780544430825407",
+          "name": "name",
+          "type": 9,
+          "flags": 8,
+          "indexId": "2:8215502407070784198"
         }
       ],
       "relations": []
     }
   ],
   "lastEntityId": "1:1805767860837116387",
-  "lastIndexId": "1:2107452570768017366",
+  "lastIndexId": "2:8215502407070784198",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

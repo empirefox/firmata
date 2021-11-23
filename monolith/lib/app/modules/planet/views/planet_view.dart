@@ -7,6 +7,7 @@ import 'package:group_list_view/group_list_view.dart';
 import 'package:monolith/app/data/providers/transport.dart';
 import 'package:monolith/app/routes/app_pages.dart';
 import 'package:monolith/pb/empirefox/firmata/config.pb.dart';
+import 'package:nil/nil.dart';
 
 import '../controllers/planet_controller.dart';
 import 'pin_button.dart';
@@ -56,15 +57,15 @@ class PlanetView extends StatelessWidget {
       BuildContext context, AsyncSnapshot<Transport> snapshot) {
     switch (snapshot.connectionState) {
       case ConnectionState.none:
-        return empty;
+        return nil;
       case ConnectionState.waiting:
         EasyLoading.show(status: 'connecting...');
-        return empty;
+        return nil;
       case ConnectionState.active:
-        return empty;
+        return nil;
       case ConnectionState.done:
         EasyLoading.dismiss();
-        if (snapshot.data == null) return empty;
+        if (snapshot.data == null) return nil;
         return _listView(context);
     }
   }

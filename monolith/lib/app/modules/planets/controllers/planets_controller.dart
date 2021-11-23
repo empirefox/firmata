@@ -31,30 +31,45 @@ class PlanetsController extends GetxController {
 
   void about() => Get.toNamed(Routes.ABOUT);
 
-  void create() =>
-      Get.toNamed<PlanetConfig>('${Routes.PLANET}?id=0')?.then((n) {
-        planets.insert(0, n!);
-        update([n.id]);
-      });
+  Future<void> create() async {
+    final r = await Get.toNamed(
+      '${Routes.PLANET_EDIT}?id=0',
+      preventDuplicates: false,
+    );
+    if (r == null) return;
+    final PlanetConfig n = r;
+    planets.insert(0, n);
+    update(['planets']);
+  }
 
-  void delete(PlanetConfig planet) => _ss.planet.remove(planet.id);
+  void delete(PlanetConfig planet) {
+    _ss.planet.remove(planet.id);
+    planets.remove(planet);
+    update(['planets']);
+  }
 
-  void edit(PlanetConfig planet) => Get.toNamed<PlanetConfig>(
-        '${Routes.PLANET_EDIT}?id=${planet.id}',
-        arguments: planet,
-      )?.then((n) {
-        planets[planets.indexOf(planet)] = n!;
-        update([n.id]);
-      });
+  Future<void> edit(PlanetConfig planet) async {
+    final r = await Get.toNamed(
+      '${Routes.PLANET_EDIT}?id=${planet.id}',
+      arguments: planet,
+    );
+    if (r == null) return;
+    final PlanetConfig n = r;
+    planets[planets.indexOf(planet)] = n;
+    update([n.id]);
+  }
 
-  void shutdown(PlanetConfig planet) =>
-      _ts.shutdown(planet.id).then((_) => update([planet.id]));
+  Future<void> shutdown(PlanetConfig planet) async {
+    await _ts.shutdown(planet.id);
+    update([planet.id]);
+  }
 
-  void view(PlanetConfig planet) async {
-    final isDown = await Get.toNamed<bool>(
+  Future<void> view(PlanetConfig planet) async {
+    final r = await Get.toNamed(
       '${Routes.PLANET}?id=${planet.id}',
       arguments: planet,
     );
+    final bool? isDown = r;
     if (isDown == true) {
       await _ts.shutdown(planet.id);
       update([planet.id]);

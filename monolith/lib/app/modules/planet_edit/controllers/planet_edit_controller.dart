@@ -111,9 +111,6 @@ class PlanetEditController extends GetxController {
   @override
   void onReady() {
     super.onReady();
-    if (invalid) {
-      Get.offNamed(Routes.PLANETS);
-    }
   }
 
   @override
@@ -123,7 +120,7 @@ class PlanetEditController extends GetxController {
 
   void onSubmit() async {
     final n = PlanetConfig.fromJson(form.value);
-    final id = _ss.planet.put(n);
+    final id = await _ss.planet.putAsync(n);
     await _ts.shutdown(id);
     Get.back(result: n, closeOverlays: true);
   }

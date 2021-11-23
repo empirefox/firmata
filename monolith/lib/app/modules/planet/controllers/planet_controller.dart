@@ -14,10 +14,7 @@ import 'package:monolith/pb/empirefox/firmata/instance.pb.dart';
 
 import '../types/types.dart';
 
-class PlanetController extends GetxController
-    with WidgetsBindingObserver
-    implements RouteAware {
-  final _routeObserver = Get.find<RouteObserver<ModalRoute<void>>>();
+class PlanetController extends GetxController with WidgetsBindingObserver {
   final _ss = Get.find<StorageService>();
   final _ts = Get.find<TransportService>();
 
@@ -30,7 +27,6 @@ class PlanetController extends GetxController
   late final Transport transport;
   List<Instance?> get instances => transport.instances;
 
-  bool _routeShown = true;
   bool _appShown = true;
   StreamSubscription? _sub;
 
@@ -43,19 +39,18 @@ class PlanetController extends GetxController
   @override
   void onReady() {
     super.onReady();
-    _routeObserver.subscribe(this, ModalRoute.of(Get.context!)!);
   }
 
   @override
   void onClose() {
     _cancelListen();
-    _routeObserver.unsubscribe(this);
     WidgetsBinding.instance!.removeObserver(this);
     super.onClose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    print('state changed');
     switch (state) {
       case AppLifecycleState.resumed:
         _appShown = true;
@@ -70,30 +65,6 @@ class PlanetController extends GetxController
         _appShown = false;
         break;
     }
-    _checkListenOrCancel();
-  }
-
-  @override
-  void didPop() {
-    _routeShown = false;
-    _checkListenOrCancel();
-  }
-
-  @override
-  void didPopNext() {
-    _routeShown = true;
-    _checkListenOrCancel();
-  }
-
-  @override
-  void didPush() {
-    _routeShown = true;
-    _checkListenOrCancel();
-  }
-
-  @override
-  void didPushNext() {
-    _routeShown = false;
     _checkListenOrCancel();
   }
 
@@ -119,7 +90,7 @@ class PlanetController extends GetxController
   }
 
   void _checkListenOrCancel() {
-    if (_appShown && _routeShown) {
+    if (_appShown) {
       _listen();
     } else {
       _cancelListen();
@@ -127,7 +98,7 @@ class PlanetController extends GetxController
   }
 
   void _listen() {
-    if (_sub == null) {
+    if (_sub == null && _future != null) {
       _sub = transport.onServerMessage.listen((_) => update());
       update();
     }

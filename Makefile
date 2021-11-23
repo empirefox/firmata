@@ -36,6 +36,9 @@ dart-create-project:
 dart-build-runner:
 	@cd monolith && flutter pub run build_runner build --delete-conflicting-outputs
 
+dart-pub-get:
+	@cd monolith && flutter pub get
+
 jsonschema:
 	@protoc --experimental_allow_proto3_optional \
 		--proto_path=$(CURDIR) \

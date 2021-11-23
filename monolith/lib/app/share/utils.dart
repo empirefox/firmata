@@ -8,7 +8,9 @@ abstract class ShareUtils {
     ParamToArg<T, S> parse,
   ) {
     if (arg == null && param == null) return null;
-    if (arg != null && param != null && arg.argToParam() != param) return null;
+    if (arg != null && param != null && arg.argToParam() != param.toString()) {
+      return null;
+    }
     arg ??= parse(param!);
     return arg;
   }

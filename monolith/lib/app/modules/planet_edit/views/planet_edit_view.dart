@@ -39,20 +39,11 @@ class PlanetEditView extends StatelessWidget {
   }
 
   Widget _form(BuildContext context) {
-    return ReactiveForm(
-      formGroup: controller.form,
-      child: Column(
-        children: [
-          _listView(context),
-          ReactiveFormConsumer(
-            builder: (context, form, child) {
-              return ElevatedButton(
-                child: Text('Submit'),
-                onPressed: form.valid ? controller.onSubmit : null,
-              );
-            },
-          ),
-        ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
+      child: ReactiveForm(
+        formGroup: controller.form,
+        child: _listView(context),
       ),
     );
   }
@@ -71,7 +62,7 @@ class PlanetEditView extends StatelessWidget {
       },
       groupHeaderBuilder: (BuildContext context, int section) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
           child: Text(
             headers[section],
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -100,6 +91,7 @@ class PlanetEditView extends StatelessWidget {
         ),
         ReactiveTextField<int>(
           formControlName: 'port',
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             labelText: 'Port',
           ),
@@ -107,6 +99,7 @@ class PlanetEditView extends StatelessWidget {
         ),
         ReactiveTextField<String>(
           formControlName: 'userAgent',
+          textInputAction: TextInputAction.done,
           decoration: InputDecoration(
             labelText: 'User Agent',
           ),
@@ -117,24 +110,29 @@ class PlanetEditView extends StatelessWidget {
           formControlName: 'isTlsDisabled',
           decoration: InputDecoration(
             labelText: 'Disable TLS',
+            border: InputBorder.none,
           ),
         ),
         ReactiveTextField<String>(
           formControlName: 'tlsCertificates',
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             labelText: 'TLS Certificates',
+            border: OutlineInputBorder(),
           ),
           minLines: 5,
           maxLines: 10,
         ),
         ReactiveTextField<String>(
           formControlName: 'tlsPassword',
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             labelText: 'TLS Password',
           ),
         ),
         ReactiveTextField<String>(
           formControlName: 'tlsAuthority',
+          textInputAction: TextInputAction.done,
           decoration: InputDecoration(
             labelText: 'TLS Authority',
           ),
@@ -143,6 +141,7 @@ class PlanetEditView extends StatelessWidget {
           formControlName: 'canTlsInsecureSkipVerify',
           decoration: InputDecoration(
             labelText: 'TLS Insecure Skip Verify',
+            border: InputBorder.none,
           ),
         ),
       ],
@@ -151,24 +150,28 @@ class PlanetEditView extends StatelessWidget {
           formControlName: 'supportGrpcCodecGzip',
           decoration: InputDecoration(
             labelText: 'gzip',
+            border: InputBorder.none,
           ),
         ),
         ReactiveAdvancedSwitch<bool>(
           formControlName: 'supportGrpcCodecIdentity',
           decoration: InputDecoration(
             labelText: 'identity',
+            border: InputBorder.none,
           ),
         ),
       ],
       'Auth': [
         ReactiveTextField<String>(
           formControlName: 'tokenType',
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             labelText: 'Token Type',
           ),
         ),
         ReactiveTextField<String>(
           formControlName: 'token',
+          textInputAction: TextInputAction.done,
           decoration: InputDecoration(
             labelText: 'Token',
           ),
@@ -177,6 +180,7 @@ class PlanetEditView extends StatelessWidget {
       'Timeout': [
         ReactiveTextField<int>(
           formControlName: 'connectionTimeoutSeconds',
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             labelText: 'Connection Timeout',
             suffixText: 's',
@@ -185,6 +189,7 @@ class PlanetEditView extends StatelessWidget {
         ),
         ReactiveTextField<int>(
           formControlName: 'idleTimeoutSeconds',
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             labelText: 'Idle Timeout',
             suffixText: 's',
@@ -193,11 +198,25 @@ class PlanetEditView extends StatelessWidget {
         ),
         ReactiveTextField<int>(
           formControlName: 'callTimeoutSeconds',
+          textInputAction: TextInputAction.done,
           decoration: InputDecoration(
             labelText: 'Call Timeout',
             suffixText: 's',
           ),
           valueAccessor: intValueAccessor,
+        ),
+      ],
+      '': [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 10),
+          child: ReactiveFormConsumer(
+            builder: (context, form, child) {
+              return ElevatedButton(
+                child: Text('Submit'),
+                onPressed: form.valid ? controller.onSubmit : null,
+              );
+            },
+          ),
         ),
       ],
     };

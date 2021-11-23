@@ -19,8 +19,13 @@ class StorageService extends GetxService {
         ));
   }
 
-  PlanetConfig? getxPlanetOrFromId(int? id) =>
-      ShareUtils.argOrParam(Get.arguments as PlanetConfig?, id, planet.get);
+  PlanetConfig? getPlanet(int id) {
+    if (id == 0) return null;
+    return planet.get(id);
+  }
 
-  PlanetConfig? getxPlanet() => ShareUtils.getxArgOrIdParam(planet.get);
+  PlanetConfig? getxPlanetOrFromId(int? id) =>
+      ShareUtils.argOrParam(Get.arguments as PlanetConfig?, id, getPlanet);
+
+  PlanetConfig? getxPlanet() => ShareUtils.getxArgOrIdParam(getPlanet);
 }

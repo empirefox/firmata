@@ -10,10 +10,6 @@ class PlanetsView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          onPressed: Get.back,
-          icon: Icon(Icons.chevron_left),
-        ),
         title: Text('Planets'),
         actions: [
           IconButton(
@@ -22,67 +18,92 @@ class PlanetsView extends StatelessWidget {
           ),
           IconButton(
             onPressed: controller.about,
-            icon: Icon(Icons.favorite),
+            icon: Icon(
+              Icons.favorite,
+              color: Colors.redAccent,
+            ),
           ),
         ],
       ),
-      body: GetBuilder(
-        id: 'planets',
-        init: controller,
-        builder: (_) => ListView.builder(
-          itemCount: controller.planets.length,
-          itemBuilder: _itemBuilder,
+      body: Container(
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+        child: GetBuilder(
+          id: 'planets',
+          init: controller,
+          builder: (_) => ListView.builder(
+            itemCount: controller.planets.length,
+            itemBuilder: _itemBuilder,
+          ),
         ),
       ),
     );
   }
 
   Widget _itemBuilder(BuildContext context, int index) {
-    final planet = controller.planets[index];
     return GetBuilder(
-      id: planet.id,
+      id: controller.planets[index].id,
       init: controller,
       builder: (_) {
-        return ListTile(
-          title: FutureBuilder(
-            future: controller.findServerName(planet.id),
-            builder: (BuildContext context, AsyncSnapshot<String> snapshot) =>
-                Text(planet.viewName(snapshot.data)),
-          ),
-          subtitle: Text(planet.address),
-          trailing: Row(
-            children: [
-              IconButton(
-                onPressed: () => controller.delete(planet),
-                icon: Icon(
-                  Icons.cancel,
-                  color: Colors.red,
+        final planet = controller.planets[index];
+        bool isOnline = controller.isOnline(planet);
+        return Card(
+          child: ListTile(
+            title: FutureBuilder(
+              future: controller.findServerName(planet.id),
+              builder: (BuildContext context, AsyncSnapshot<String> snapshot) =>
+                  Text(planet.viewName(snapshot.data)),
+            ),
+            subtitle: Text(
+              planet.address,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+            trailing: PopupMenuButton(
+              icon: Icon(Icons.more_vert),
+              onSelected: (VoidCallback onTap) => onTap(),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: () => controller.view(planet),
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.videogame_asset,
+                      color: Colors.purple,
+                    ),
+                    title: Text('Control'),
+                  ),
                 ),
-              ),
-              IconButton(
-                onPressed: () => controller.edit(planet),
-                icon: Icon(
-                  Icons.edit,
-                  color: Colors.green,
+                PopupMenuItem(
+                  value: () => controller.edit(planet),
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.edit,
+                      color: Colors.green,
+                    ),
+                    title: Text('Edit'),
+                  ),
                 ),
-              ),
-              IconButton(
-                onPressed: controller.isOnline(planet)
-                    ? () => controller.shutdown(planet)
-                    : null,
-                icon: Icon(
-                  Icons.cancel,
-                  color: Colors.blue,
+                PopupMenuItem(
+                  value: isOnline ? () => controller.shutdown(planet) : null,
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.power_settings_new,
+                      color: isOnline ? Colors.red : Colors.grey,
+                    ),
+                    title: Text('Disconnect'),
+                  ),
                 ),
-              ),
-              IconButton(
-                onPressed: () => controller.view(planet),
-                icon: Icon(
-                  Icons.cancel,
-                  color: Colors.purple,
+                PopupMenuItem(
+                  value: () => controller.delete(planet),
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.cancel,
+                      color: Colors.red,
+                    ),
+                    title: Text('Delete'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

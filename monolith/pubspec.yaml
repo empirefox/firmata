@@ -17,6 +17,7 @@ dependencies:
   group_list_view: ^1.1.1
   grpc: ^3.0.2
   json_annotation: ^4.3.0
+  nil: ^1.1.1
   protobuf: ^2.0.0
   reactive_forms: ^10.6.4
   # reactive_forms_annotations:
