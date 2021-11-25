@@ -17,10 +17,23 @@ message FirmataIndex { uint32 firmata = 1; }
 
 message ServerMessage {
   oneof type {
-    Instance connected = 1;
-    uint32 disconnected = 2;
+    Connecting connecting = 1;
+    Instance connected = 2;
     Digital digital = 3;
     Analog analog = 4;
+  }
+
+  message Connecting {
+    uint32 firmata = 1;
+    Status status = 2;
+
+    enum Status {
+      disconnected = 0;
+      dialing = 1;
+      dialTemporaryFail = 2;
+      dialFatalError = 3;
+      handshakeError = 4;
+    }
   }
 
   message Digital {

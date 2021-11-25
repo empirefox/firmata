@@ -9,6 +9,7 @@ import "empirefox/firmata/pinname.proto";
 message Integration {
   repeated Firmata firmatas = 1;
   repeated Device devices = 2;
+  uint32 tryConnectEverySecond = 3;
 }
 
 message Firmata {
@@ -22,6 +23,8 @@ message Firmata {
   // by `udevadm info /dev/ttyUSB0`
   string dial = 5;
   uint32 samplingMs = 6;
+  bool manualConnect = 7;
+  uint32 connectRetrySecond = 8;
 }
 
 message Device {
@@ -32,32 +35,35 @@ message Device {
 }
 
 message Wiring {
-  message Firmata{
+  message Firmata {
     string name = 1;
     string desc = 2;
     FirmataPins from = 3;
     To to = 4;
+    bool autoHigh = 5;
+
+    message To {
+      oneof is {
+        FirmataPins firmata = 1;
+        DevicePins device = 2;
+      }
+    }
   }
 
-  message Device{
+  message Device {
     string name = 1;
     string desc = 2;
     DevicePins from = 3;
-    To to = 4;
-  }
-
-  message To {
-    oneof is {
-      FirmataPins firmata = 1;
-      DevicePins device = 2;
-    }
+    DevicePins to = 4;
   }
 
   message FirmataPins {
     string name = 1;
+    // ignored by `from`
+    string firmata = 2;
     // computed only
-    uint32 firmataIndex = 2;
-    string desc = 3;
+    uint32 firmataIndex = 3;
+    string desc = 4;
 
     oneof first {
       empirefox.firmata.PinName gpioName = 5;

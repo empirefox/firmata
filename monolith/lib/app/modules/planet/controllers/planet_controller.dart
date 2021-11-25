@@ -113,6 +113,8 @@ class PlanetController extends GetxController with WidgetsBindingObserver {
   // View
   //
 
+  void notFound() => Get.offAllNamed(Routes.PLANETS);
+
   void about() => Get.toNamed(Routes.ABOUT);
 
   bool isInstanceAlive(IndexPath index) => instances[index.section] != null;

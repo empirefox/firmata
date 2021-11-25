@@ -13,13 +13,7 @@ class AboutView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: Get.back,
-          icon: Icon(Icons.chevron_left),
-        ),
-        title: Text('About'),
-      ),
+      appBar: AppBar(title: Text('About')),
       body: ListView(
         children: [
           // controller.ab.setImage("assets/logo.png"),

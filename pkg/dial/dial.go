@@ -1,6 +1,7 @@
 package dial
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -16,7 +17,7 @@ import (
 // serial:///dev/ttyUSB0?baud=4800&size=8&parity=N&stop_bit=1&timeout=2s or
 // serial:///dev/serial/by-path/pci-0000:00:1a.0-usb-0:1.2:1.0-port0?baud=4800
 // by `udevadm info /dev/ttyUSB0`
-func Dial(p string) (io.ReadWriteCloser, error) {
+func Dial(ctx context.Context, p string) (io.ReadWriteCloser, error) {
 	u, err := parseDialAddr(p)
 	if err != nil {
 		return nil, err
@@ -30,7 +31,7 @@ func Dial(p string) (io.ReadWriteCloser, error) {
 		}
 
 		d := net.Dialer{Timeout: c.timeout, KeepAlive: c.keepAlive}
-		return d.Dial("tcp", c.addr)
+		return d.DialContext(ctx, "tcp", c.addr)
 	case "serial":
 		c, err := toSerial(u)
 		if err != nil {

@@ -2,10 +2,9 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart' show EasyLoading;
-import 'package:get/get.dart' show Get, GetBuilder, GetNavigation, Inst;
+import 'package:get/get.dart' show Get, GetBuilder, Inst;
 import 'package:group_list_view/group_list_view.dart';
 import 'package:monolith/app/data/providers/transport.dart';
-import 'package:monolith/app/routes/app_pages.dart';
 import 'package:monolith/pb/empirefox/firmata/config.pb.dart';
 import 'package:nil/nil.dart';
 
@@ -19,15 +18,19 @@ import 'pin_switch.dart';
 
 class PlanetView extends StatelessWidget {
   final controller = Get.find<PlanetController>();
-  final empty = Container();
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<PlanetController>();
     final future = controller.future;
     if (future == null) {
-      Get.offNamed(Routes.PLANETS);
-      return empty;
+      return Center(
+        child: Column(
+          children: [
+            Text('Planet not found'),
+            _notFoundButton(),
+          ],
+        ),
+      );
     }
     return FutureBuilder(
       future: future,
@@ -35,15 +38,11 @@ class PlanetView extends StatelessWidget {
         final title = controller.config.viewName(snapshot.data?.config.nick);
         return Scaffold(
           appBar: AppBar(
-            leading: IconButton(
-              onPressed: Get.back,
-              icon: Icon(Icons.chevron_left),
-            ),
             title: Text(title),
             actions: [
               IconButton(
                 onPressed: controller.about,
-                icon: Icon(Icons.favorite),
+                icon: const Icon(Icons.favorite),
               ),
             ],
           ),
@@ -65,9 +64,28 @@ class PlanetView extends StatelessWidget {
         return nil;
       case ConnectionState.done:
         EasyLoading.dismiss();
-        if (snapshot.data == null) return nil;
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              children: [
+                Text('Failed to connect to ${controller.config.address}'),
+                _notFoundButton(),
+              ],
+            ),
+          );
+        }
         return _listView(context);
     }
+  }
+
+  Widget _notFoundButton() {
+    return MaterialButton(
+      shape: CircleBorder(),
+      color: Colors.blue,
+      padding: EdgeInsets.all(20),
+      onPressed: controller.notFound,
+      child: Icon(Icons.replay),
+    );
   }
 
   Widget _listView(BuildContext context) {

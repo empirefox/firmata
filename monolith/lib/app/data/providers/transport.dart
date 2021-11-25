@@ -24,14 +24,14 @@ typedef TypedAsyncCallback<T> = Future<void> Function(T t);
 
 class TypedServerMessage {
   final ServerMessage_Type type;
+  final ServerMessage_Connecting? connecting;
   final Instance? connected;
-  final int? disconnected;
   final InstancePins? digital;
   final AnalogMessage? analog;
   const TypedServerMessage(
       {required this.type,
+      this.connecting,
       this.connected,
-      this.disconnected,
       this.digital,
       this.analog});
 
@@ -90,15 +90,16 @@ class Transport {
       {};
 
   late final List<Instance?> instances;
+  late final List<ServerMessage_Connecting?> connectings;
   late final Stream<TypedServerMessage> onServerMessage;
 
   Stream<Instance> get onConnected => onServerMessage
       .takeWhile((msg) => msg.type == ServerMessage_Type.connected)
       .map((msg) => msg.connected!);
 
-  Stream<int> get onDisconnected => onServerMessage
-      .takeWhile((msg) => msg.type == ServerMessage_Type.disconnected)
-      .map((msg) => msg.disconnected!);
+  Stream<ServerMessage_Connecting> get onConnecting => onServerMessage
+      .takeWhile((msg) => msg.type == ServerMessage_Type.connecting)
+      .map((msg) => msg.connecting!);
 
   Stream<InstancePins> get onDigitalMessage => onServerMessage
       .takeWhile((msg) => msg.type == ServerMessage_Type.digital)
@@ -209,6 +210,7 @@ class Transport {
     boardById = Map.fromIterable(boards, key: (b) => (b as Board).id);
     await _initFromIntegeration();
     instances = List.filled(integration.firmatas.length, null);
+    connectings = List.filled(integration.firmatas.length, null);
     await _initFromConfig();
 
     onServerMessage = _onServerMessage().asBroadcastStream();
@@ -235,26 +237,6 @@ class Transport {
         _wirePinsPairsByFirmata
             .putIfAbsent(oFrom.firmataIndex, _Pair.createPairs)
             .add(_Pair(oFrom, tFrom));
-        if (oTo.hasFirmata()) {
-          _wirePinsPairsByFirmata
-              .putIfAbsent(oTo.firmata.firmataIndex, _Pair.createPairs)
-              .add(_Pair(oTo.firmata, tTo.firmata));
-        }
-      }
-    }
-
-    final oDevices = originalIntegration.devices;
-    final tDevices = integration.devices;
-    final totalDevices = originalIntegration.devices.length;
-    for (var i = 0; i < totalDevices; i++) {
-      final oWires = oDevices[i].wiring;
-      final tWires = tDevices[i].wiring;
-      final totalWires = oWires.length;
-      for (var j = 0; j < totalWires; j++) {
-        final oWire = oWires[j];
-        final tWire = tWires[j];
-        final oTo = oWire.to;
-        final tTo = tWire.to;
         if (oTo.hasFirmata()) {
           _wirePinsPairsByFirmata
               .putIfAbsent(oTo.firmata.firmataIndex, _Pair.createPairs)
@@ -298,19 +280,21 @@ class Transport {
   Stream<TypedServerMessage> _onServerMessage() {
     return _client.onServerMessage(Empty.getDefault()).map((msg) {
       switch (msg.whichType()) {
+        case ServerMessage_Type.connecting:
+          final connecting = _onConnecting(msg.connecting);
+          instances[connecting.firmata] = null;
+          connectings[connecting.firmata] = connecting;
+          return TypedServerMessage(
+            type: ServerMessage_Type.connecting,
+            connecting: connecting,
+          );
         case ServerMessage_Type.connected:
           final inst = _onConnected(msg.connected);
           instances[inst.firmataIndex] = inst;
+          connectings[inst.firmataIndex] = null;
           return TypedServerMessage(
             type: ServerMessage_Type.connected,
             connected: inst,
-          );
-        case ServerMessage_Type.disconnected:
-          final firmataIndex = _onDisConnected(msg.disconnected);
-          instances[firmataIndex] = null;
-          return TypedServerMessage(
-            type: ServerMessage_Type.disconnected,
-            disconnected: firmataIndex,
           );
         case ServerMessage_Type.digital:
           final instancePins = _onDigitalMessage(msg.digital);
@@ -331,6 +315,10 @@ class Transport {
           return TypedServerMessage._invalid;
       }
     }).takeWhile((msg) => msg.isValid);
+  }
+
+  ServerMessage_Connecting _onConnecting(ServerMessage_Connecting connecting) {
+    return connecting;
   }
 
   Instance _onConnected(Instance inst) {
@@ -399,10 +387,6 @@ class Transport {
       }
     });
     return inst;
-  }
-
-  int _onDisConnected(int firmataIndex) {
-    return firmataIndex;
   }
 
   InstancePins _onDigitalMessage(ServerMessage_Digital r) {
@@ -549,6 +533,7 @@ extension TransportGroupPinExt on Group_Pin {
     if (whichType() != Group_Pin_Type.switch_21) return null;
     final type = switch_21;
     if (!type.hasDetect()) return null;
+    // TODO separate not_set and not_online?
     final detect = switch_21.detect;
     return t.instances[detect.firmataIndex]?.pins[detect.dx];
   }

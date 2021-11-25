@@ -15,6 +15,9 @@
                         "$ref": "#/definitions/empirefox.firmata.Device"
                     },
                     "type": "array"
+                },
+                "tryConnectEverySecond": {
+                    "type": "integer"
                 }
             },
             "additionalProperties": true,
@@ -64,6 +67,12 @@
                 },
                 "samplingMs": {
                     "type": "integer"
+                },
+                "manualConnect": {
+                    "type": "boolean"
+                },
+                "connectRetrySecond": {
+                    "type": "integer"
                 }
             },
             "additionalProperties": true,
@@ -82,7 +91,7 @@
                     "additionalProperties": true
                 },
                 "to": {
-                    "$ref": "#/definitions/empirefox.firmata.Wiring.To",
+                    "$ref": "#/definitions/empirefox.firmata.Wiring.DevicePins",
                     "additionalProperties": true
                 }
             },
@@ -120,7 +129,24 @@
                     "additionalProperties": true
                 },
                 "to": {
-                    "$ref": "#/definitions/empirefox.firmata.Wiring.To",
+                    "$ref": "#/definitions/empirefox.firmata.Wiring.Firmata.To",
+                    "additionalProperties": true
+                },
+                "autoHigh": {
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": true,
+            "type": "object"
+        },
+        "empirefox.firmata.Wiring.Firmata.To": {
+            "properties": {
+                "firmata": {
+                    "$ref": "#/definitions/empirefox.firmata.Wiring.FirmataPins",
+                    "additionalProperties": true
+                },
+                "device": {
+                    "$ref": "#/definitions/empirefox.firmata.Wiring.DevicePins",
                     "additionalProperties": true
                 }
             },
@@ -131,6 +157,10 @@
             "properties": {
                 "name": {
                     "type": "string"
+                },
+                "firmata": {
+                    "type": "string",
+                    "description": "ignored by `from`"
                 },
                 "firmataIndex": {
                     "type": "integer",
@@ -986,20 +1016,6 @@
                 },
                 "lastAx": {
                     "type": "integer"
-                }
-            },
-            "additionalProperties": true,
-            "type": "object"
-        },
-        "empirefox.firmata.Wiring.To": {
-            "properties": {
-                "firmata": {
-                    "$ref": "#/definitions/empirefox.firmata.Wiring.FirmataPins",
-                    "additionalProperties": true
-                },
-                "device": {
-                    "$ref": "#/definitions/empirefox.firmata.Wiring.DevicePins",
-                    "additionalProperties": true
                 }
             },
             "additionalProperties": true,

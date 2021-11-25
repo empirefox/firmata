@@ -15,10 +15,6 @@ class PlanetEditView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          onPressed: Get.back,
-          icon: Icon(Icons.chevron_left),
-        ),
         title: Text('Edit Planet'),
         actions: [
           IconButton(

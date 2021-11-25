@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
@@ -24,6 +25,9 @@ type options struct {
 }
 
 func run() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
@@ -50,6 +54,12 @@ func run() error {
 		return err
 	}
 
+	// TODO add validation before here
+	err = pbload.CheckError(boards, integration, config)
+	if err != nil {
+		return err
+	}
+
 	if c.JustLoadJson {
 		// TODO pretty print
 		logger.Info().Msgf("boards = %#v\n", boards)
@@ -65,7 +75,7 @@ func run() error {
 
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
-	pb.RegisterTransportServer(grpcServer, grpci.NewServer(
+	pb.RegisterTransportServer(grpcServer, grpci.NewServer(ctx,
 		&logger, pbload.LoadApiVersion(), boards, integration, config,
 	))
 	return grpcServer.Serve(lis)

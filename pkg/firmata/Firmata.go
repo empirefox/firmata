@@ -218,6 +218,16 @@ func (f *Firmata) SetPinMode_l(pin byte, mode byte) error {
 	return nil
 }
 
+func (f *Firmata) SetPinValue_l(pin byte, value uint32) error {
+	if pin >= f.TotalPins {
+		return fmt.Errorf("SetPinValue pin out of index: %d", pin)
+	}
+	if f.Pins[pin].IsAnalog() {
+		return f.AnalogWrite_l(pin, value)
+	}
+	return f.SetDigitalPinValue_l(pin, byte(value&0xFF))
+}
+
 // SetDigitalPinToLow_l sets the pin to value(0/1).
 func (f *Firmata) SetDigitalPinToLow_l(pin byte, low bool) error {
 	if low {
@@ -230,6 +240,9 @@ func (f *Firmata) SetDigitalPinToLow_l(pin byte, low bool) error {
 func (f *Firmata) SetDigitalPinValue_l(pin byte, value byte) error {
 	if pin >= f.TotalPins {
 		return fmt.Errorf("SetDigitalPinValue pin out of index: %d", pin)
+	}
+	if value > 1 {
+		return fmt.Errorf("SetDigitalPinValue pin %d accept 0/1, but got: %d", pin, value)
 	}
 	if f.Pins[pin].Value_l == uint32(value) {
 		return nil

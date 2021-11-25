@@ -1,6 +1,7 @@
 package pbload
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,4 +57,62 @@ func JsonFileToPb(p string, m protoreflect.ProtoMessage) error {
 		return err
 	}
 	return json.Unmarshal(b, m)
+}
+
+func CheckError(boards []*pb.Board, integration *pb.Integration, config *pb.Config) error {
+	boardByName := make(map[string]uint32, len(boards))
+	for i, b := range boards {
+		if _, ok := boardByName[b.Id]; ok {
+			return fmt.Errorf("duplicated board id: %s", b.Id)
+		}
+		boardByName[b.Id] = uint32(i)
+	}
+
+	if integration.TryConnectEverySecond == 0 {
+		integration.TryConnectEverySecond = 10
+	}
+
+	firmataByName := make(map[string]uint32, len(integration.Firmatas))
+	for i, f := range integration.Firmatas {
+		if _, ok := firmataByName[f.Name]; ok {
+			return fmt.Errorf("duplicated firmata name: %s", f.Name)
+		}
+		firmataByName[f.Name] = uint32(i)
+	}
+
+	for i, t := range integration.Firmatas {
+		if t.ConnectRetrySecond == 0 {
+			t.ConnectRetrySecond = 1
+		}
+		for _, w := range t.Wiring {
+			w.From.FirmataIndex = uint32(i)
+			if f := w.To.GetFirmata(); f != nil {
+				index, ok := firmataByName[f.Firmata]
+				if !ok {
+					return fmt.Errorf("wire firmata not found: %s", f.Firmata)
+				}
+				f.FirmataIndex = index
+			}
+		}
+	}
+
+	for _, g := range config.Groups {
+		for _, p := range g.Pins {
+			index, ok := firmataByName[p.Firmata]
+			if !ok {
+				return fmt.Errorf("group pin of firmata not found: %s", p.Firmata)
+			}
+			p.FirmataIndex = index
+
+			if dt := p.GetSwitch().GetDetect(); dt != nil {
+				index, ok := firmataByName[dt.Firmata]
+				if !ok {
+					return fmt.Errorf("group pin of firmata not found: %s", dt.Firmata)
+				}
+				dt.FirmataIndex = index
+			}
+		}
+	}
+
+	return nil
 }
