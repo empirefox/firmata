@@ -59,7 +59,7 @@ class _PinNumberWriterState extends State<PinNumberWriter> {
                       return;
                     }
                     widget.onTrigger.call(value).then(
-                          (_) => setState(() => pin.value = value),
+                          (_) => setState(() {}),
                           onError: (err) =>
                               Get.snackbar('${groupPin.nick} error', '$err'),
                         );

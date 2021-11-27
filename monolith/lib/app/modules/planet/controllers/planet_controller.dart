@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart' show Get, GetNavigation, GetxController, Inst;
@@ -117,43 +118,44 @@ class PlanetController extends GetxController with WidgetsBindingObserver {
 
   void about() => Get.toNamed(Routes.ABOUT);
 
-  bool isInstanceAlive(IndexPath index) => instances[index.section] != null;
+  bool isInstanceAlive(VisibleGroupPin vgp) =>
+      instances[vgp.pin.firmataIndex] != null;
 
-  Group_Pin groupPin(IndexPath index) =>
-      transport.groupVisiblePins[index.section][index.index];
+  VisibleGroupPin groupPin(IndexPath index) =>
+      transport.visibleGroupPins[index.section][index.index];
 
   //
   // GroupListView
   //
 
   int countOfItemInSection(int section) =>
-      transport.groupVisiblePins[section].length;
+      transport.visibleGroupPins[section].length;
 
   //
   // GetBuilderFilters
   //
 
   GetBuilderFilter<PlanetController> detectOrAliveFilter(
-          IndexPath index, Instance_Pin pin, Instance_Pin? detect) =>
-      detect != null ? detectFilter(index, pin, detect) : aliveFilter(index);
+          VisibleGroupPin vgp, Instance_Pin pin, Instance_Pin? detect) =>
+      detect != null ? detectFilter(vgp, pin, detect) : aliveFilter(vgp);
 
-  GetBuilderFilter<PlanetController> aliveFilter(IndexPath index) =>
-      (_) => instances[index.section]?.firmataIndex ?? -1;
+  GetBuilderFilter<PlanetController> aliveFilter(VisibleGroupPin vgp) =>
+      (_) => instances[vgp.pin.firmataIndex]?.firmataIndex ?? -1;
 
   GetBuilderFilter<PlanetController> valueFilter(
-          IndexPath index, Instance_Pin pin) =>
-      (_) => instances[index.section] == null ? double.nan : pin.value;
+          VisibleGroupPin vgp, Instance_Pin pin) =>
+      (_) => instances[vgp.pin.firmataIndex] == null ? double.nan : pin.value;
 
   GetBuilderFilter<PlanetController> detectFilter(
-          IndexPath index, Instance_Pin pin, Instance_Pin? detect) =>
-      (_) => instances[index.section] == null
+          VisibleGroupPin vgp, Instance_Pin pin, Instance_Pin? detect) =>
+      (_) => instances[vgp.pin.firmataIndex] == null
           ? double.nan
           : (detect?.value ?? pin.value);
 
-  TriggerCallback onTriggerButton(IndexPath index) {
+  TriggerCallback onTriggerButton(VisibleGroupPin vgp) {
     return (int ms) => transport.triggerDigitalPin(
-          group: index.section,
-          gpin: index.index,
+          group: vgp.group,
+          gpin: vgp.gpin,
           realtimeTriggerMs: ms,
         );
   }
@@ -162,29 +164,29 @@ class PlanetController extends GetxController with WidgetsBindingObserver {
   // actions
   //
 
-  TriggerCallback onTriggerSwitch(IndexPath index, Group_Pin groupPin) {
+  TriggerCallback onTriggerSwitch(VisibleGroupPin vgp, Instance_Pin pin) {
     return (int ms) {
       if (ms == 0) {
         return transport.setPinValue(
-          group: index.section,
-          gpin: index.index,
-          value: transport
-                  .instances[groupPin.firmataIndex]!.pins[groupPin.dx].value ^
-              1,
+          pin: pin,
+          group: vgp.group,
+          gpin: vgp.gpin,
+          value: vgp.getPin(transport)!.value ^ 1,
         );
       }
       return transport.triggerDigitalPin(
-        group: index.section,
-        gpin: index.index,
+        group: vgp.group,
+        gpin: vgp.gpin,
         realtimeTriggerMs: ms,
       );
     };
   }
 
-  TriggerCallback onTriggerNumberWriter(IndexPath index) {
+  TriggerCallback onTriggerNumberWriter(VisibleGroupPin vgp, Instance_Pin pin) {
     return (int value) => transport.setPinValue(
-          group: index.section,
-          gpin: index.index,
+          pin: pin,
+          group: vgp.group,
+          gpin: vgp.gpin,
           value: value,
         );
   }

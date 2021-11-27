@@ -3,7 +3,6 @@ package grpci
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -14,6 +13,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
+
+var empty = &emptypb.Empty{}
 
 type temporary interface {
 	Temporary() bool
@@ -155,10 +156,12 @@ func (s *Server) connectFirmata(ctx context.Context, idx uint32) (err error) {
 						switch p.Id.(type) {
 						case *pb.Group_Pin_Ax:
 							dx = f.AnalogPins[p.GetAx()].Dx
+							p.Id = &pb.Group_Pin_Dx{Dx: uint32(dx)}
 						case *pb.Group_Pin_Dx:
 							dx = byte(p.GetDx())
 						case *pb.Group_Pin_GpioName:
 							dx = f.DxByName[p.GetGpioName()]
+							p.Id = &pb.Group_Pin_Dx{Dx: uint32(dx)}
 						}
 						err := f.SetPinMode_l(dx, byte(p.Mode))
 						if err != nil {
@@ -218,17 +221,15 @@ func (s *Server) connectFirmata(ctx context.Context, idx uint32) (err error) {
 			s.instances[data.Index] = inst
 			s.instanceMu.Unlock()
 
-			pbInst, err := inst.ToPb()
-			if err != nil {
-				return
-			}
+			s.log.Debug().Str("firmata", pbConfig.Name).
+				Msg("added to instannce")
 
 			out := &pb.ServerMessage{
 				Type: &pb.ServerMessage_Connected{
-					Connected: pbInst,
+					Connected: inst.ToPb_l(),
 				},
 			}
-			s.broadcastServerMessage(out)
+			go s.broadcastServerMessage(out)
 		},
 		OnAnalogMessage: func(f *firmata.Firmata, pin *firmata.Pin) {
 			data := f.Config.Data.(*FirmataData)
@@ -241,7 +242,7 @@ func (s *Server) connectFirmata(ctx context.Context, idx uint32) (err error) {
 					},
 				},
 			}
-			s.broadcastServerMessage(out)
+			go s.broadcastServerMessage(out)
 		},
 		OnDigitalMessage: func(f *firmata.Firmata, port byte, pins byte, values byte) {
 			data := f.Config.Data.(*FirmataData)
@@ -255,7 +256,7 @@ func (s *Server) connectFirmata(ctx context.Context, idx uint32) (err error) {
 					},
 				},
 			}
-			s.broadcastServerMessage(out)
+			go s.broadcastServerMessage(out)
 		},
 		OnPinState: func(f *firmata.Firmata, pin *firmata.Pin) {
 			// ignore
@@ -279,11 +280,14 @@ func (s *Server) connectFirmata(ctx context.Context, idx uint32) (err error) {
 
 	for {
 		// dialing
-		log.Println("dialing")
+		s.log.Debug().Str("type", "dialing").Str("firmata", pbConfig.Name).Send()
 		s.broadcastConnection(idx, pb.ServerMessage_Connecting_dialing)
 		c, err := dial.Dial(ctx, pbConfig.Dial)
 		if err != nil {
-			log.Println("dial error:", err)
+			s.log.Debug().Str("type", "dialing").
+				Str("firmata", pbConfig.Name).
+				Err(err).
+				Send()
 			if e, ok := err.(temporary); ok && e.Temporary() {
 				// dialTemporaryFail
 				s.broadcastConnection(idx, pb.ServerMessage_Connecting_dialTemporaryFail)
@@ -309,8 +313,12 @@ func (s *Server) connectFirmata(ctx context.Context, idx uint32) (err error) {
 
 		err = inst.Handshake(ctx)
 		if err != nil {
-			log.Println("Handshake err:", err)
 			// handshakeError
+			s.log.Debug().Str("type", "handshake").
+				Str("firmata", pbConfig.Name).
+				Str("err", err.Error()).
+				Err(inst.firmata.ClosedError_l).
+				Send()
 			s.broadcastConnection(idx, pb.ServerMessage_Connecting_handshakeError)
 			if s.connectRetry(ctx, idx) {
 				continue
@@ -363,6 +371,8 @@ func (s *Server) waitFirmataClosed(inst *Instance) {
 	s.instanceMu.Lock()
 	s.instances[inst.index] = nil
 	s.instanceMu.Unlock()
+	s.log.Debug().Str("firmata", inst.config.Name).
+		Msg("removed from instannce")
 	s.broadcastConnection(inst.index, pb.ServerMessage_Connecting_disconnected)
 }
 
@@ -463,18 +473,9 @@ func (s *Server) broadcastConnection(idx uint32, status pb.ServerMessage_Connect
 func (s *Server) broadcastServerMessage(out *pb.ServerMessage) {
 	s.onServerMessageMu.Lock()
 	defer s.onServerMessageMu.Unlock()
-
-	count := len(s.onSeverMessageSenders)
-	cpy := make([]pb.Transport_OnServerMessageServer, 0, count)
-
-	for i := 0; i < count; i++ {
-		err := s.onSeverMessageSenders[i].Send(out)
-		if err != nil {
-			continue
-		}
-		cpy = append(cpy, s.onSeverMessageSenders[i])
+	for _, sender := range s.onSeverMessageSenders {
+		sender.Send(out)
 	}
-	s.onSeverMessageSenders = cpy
 }
 
 func (s *Server) GetApiVersion(ctx context.Context, in *emptypb.Empty) (*pb.Version_Peer, error) {
@@ -497,18 +498,35 @@ func (s *Server) OnServerMessage(in *emptypb.Empty, stream pb.Transport_OnServer
 	s.onServerMessageMu.Lock()
 	s.onSeverMessageSenders = append(s.onSeverMessageSenders, stream)
 	s.onServerMessageMu.Unlock()
-	return s.sendInstancesTo(stream)
+
+	s.sendInstancesTo(stream)
+	<-stream.Context().Done()
+
+	s.onServerMessageMu.Lock()
+	for i, sender := range s.onSeverMessageSenders {
+		if sender == stream {
+			last := len(s.onSeverMessageSenders) - 1
+			s.onSeverMessageSenders[i] = s.onSeverMessageSenders[last]
+			s.onSeverMessageSenders = s.onSeverMessageSenders[:last]
+			break
+		}
+	}
+	s.onServerMessageMu.Unlock()
+	return nil
 }
 
 func (s *Server) Connect(ctx context.Context, in *pb.FirmataIndex) (*emptypb.Empty, error) {
 	s.instanceMu.Lock()
 	s.instanceTmpDown[in.Firmata] = false
 	s.instanceMu.Unlock()
-	return nil, s.tryConnectFirmata(ctx, in.Firmata)
+	return empty, s.tryConnectFirmata(ctx, in.Firmata)
 }
 func (s *Server) Disconnect(ctx context.Context, in *pb.FirmataIndex) (*emptypb.Empty, error) {
+	s.instanceMu.Lock()
+	s.instanceTmpDown[in.Firmata] = true
+	s.instanceMu.Unlock()
 	s.disconnectFirmata(ctx, in.Firmata)
-	return nil, nil
+	return empty, nil
 }
 func (s *Server) SetPinMode(ctx context.Context, in *pb.SetPinModeRequest) (*emptypb.Empty, error) {
 	s.instanceMu.Lock()
@@ -523,7 +541,7 @@ func (s *Server) SetPinMode(ctx context.Context, in *pb.SetPinModeRequest) (*emp
 		return f.SetPinMode_l(byte(in.Dx), byte(in.Mode))
 	})
 	// TODO broadcast?
-	return nil, err
+	return empty, err
 }
 func (s *Server) TriggerDigitalPin(ctx context.Context, in *pb.TriggerDigitalPinRequest) (*emptypb.Empty, error) {
 	var instance *Instance
@@ -572,6 +590,8 @@ func (s *Server) TriggerDigitalPin(ctx context.Context, in *pb.TriggerDigitalPin
 			return nil
 		},
 		func(inst *Instance, gp *pb.Group_Pin) error {
+			s.log.Debug().Str("firmata", instance.config.Name).
+				Uint8("dx", dx).Uint8("v", values1).Send()
 			return f.SetDigitalPinValue_l(dx, values1)
 		})
 	if err != nil {
@@ -594,21 +614,24 @@ func (s *Server) TriggerDigitalPin(ctx context.Context, in *pb.TriggerDigitalPin
 
 	time.Sleep(time.Duration(triggerMs) * time.Millisecond)
 	err = f.WaitLoop(func() error {
+		s.log.Debug().Str("firmata", instance.config.Name).
+			Uint8("dx", dx).Uint8("v", values2).Send()
 		return f.SetDigitalPinValue_l(dx, values2)
 	})
 
 	data.Values = uint32(values2) << (dx % 8)
 	s.broadcastServerMessage(out)
 
-	return nil, err
+	return empty, err
 }
 func (s *Server) SetPinValue(ctx context.Context, in *pb.SetPinValueRequest) (*emptypb.Empty, error) {
 	var instance *Instance
 	var dx byte
-	var isAnalog bool
 	err := s.loopFromGroup(in.Group, in.Gpin, nil, func(inst *Instance, gp *pb.Group_Pin) error {
 		instance = inst
 		dx = byte(gp.GetDx())
+		s.log.Debug().Str("firmata", inst.config.Name).
+			Uint8("dx", dx).Uint32("v", in.Value).Send()
 		return inst.firmata.SetPinValue_l(dx, in.Value)
 	})
 	if err != nil {
@@ -616,7 +639,7 @@ func (s *Server) SetPinValue(ctx context.Context, in *pb.SetPinValueRequest) (*e
 	}
 
 	var out *pb.ServerMessage
-	if isAnalog {
+	if instance.firmata.Pins[dx].IsAnalog() {
 		out = &pb.ServerMessage{
 			Type: &pb.ServerMessage_Analog_{
 				Analog: &pb.ServerMessage_Analog{
@@ -640,29 +663,29 @@ func (s *Server) SetPinValue(ctx context.Context, in *pb.SetPinValueRequest) (*e
 	}
 
 	s.broadcastServerMessage(out)
-	return nil, nil
+	return empty, nil
 }
 func (s *Server) ReportDigital(ctx context.Context, in *pb.ReportDigitalRequest) (*emptypb.Empty, error) {
 	err := s.loopFromFirmata(in.Firmata, func(inst *Instance) error {
 		return inst.firmata.ReportDigital_l(byte(in.Port), in.Enable)
 	})
-	return nil, err
+	return empty, err
 }
 func (s *Server) ReportAnalog(ctx context.Context, in *pb.ReportAnalogRequest) (*emptypb.Empty, error) {
 	err := s.loopFromFirmata(in.Firmata, func(inst *Instance) error {
 		return inst.firmata.ReportAnalog_l(byte(in.Pin), in.Enable)
 	})
-	return nil, err
+	return empty, err
 }
 func (s *Server) WriteString(ctx context.Context, in *pb.WriteStringRequest) (*emptypb.Empty, error) {
 	err := s.loopFromFirmata(in.Firmata, func(inst *Instance) error {
 		return inst.firmata.StringWrite_l([]byte(in.Data))
 	})
-	return nil, err
+	return empty, err
 }
 func (s *Server) SetSamplingInterval(ctx context.Context, in *pb.SetSamplingIntervalRequest) (*emptypb.Empty, error) {
 	err := s.loopFromFirmata(in.Firmata, func(inst *Instance) error {
 		return inst.firmata.SamplingInterval_l(in.Ms)
 	})
-	return nil, err
+	return empty, err
 }

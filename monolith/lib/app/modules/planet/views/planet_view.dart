@@ -6,7 +6,6 @@ import 'package:get/get.dart' show Get, GetBuilder, Inst;
 import 'package:group_list_view/group_list_view.dart';
 import 'package:monolith/app/data/providers/transport.dart';
 import 'package:monolith/pb/empirefox/firmata/config.pb.dart';
-import 'package:nil/nil.dart';
 
 import '../controllers/planet_controller.dart';
 import 'pin_button.dart';
@@ -18,6 +17,9 @@ import 'pin_switch.dart';
 
 class PlanetView extends StatelessWidget {
   final controller = Get.find<PlanetController>();
+  final nil = Container();
+
+  PlanetView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +70,8 @@ class PlanetView extends StatelessWidget {
           return Center(
             child: Column(
               children: [
-                Text('Failed to connect to ${controller.config.address}'),
+                Text(
+                    'Failed to connect to ${controller.config.address}: ${snapshot.error}'),
                 _notFoundButton(),
               ],
             ),
@@ -119,83 +122,83 @@ class PlanetView extends StatelessWidget {
 
   Widget _itemBuilder(BuildContext context, IndexPath index) {
     final transport = controller.transport;
-    final groupPin = controller.groupPin(index);
-    final pin = groupPin.getPin(transport);
+    final vgp = controller.groupPin(index);
+    final pin = vgp.getPin(transport);
     if (pin == null) {
-      return PinError(groupPin: groupPin);
+      return PinError(groupPin: vgp.pin);
     }
-    switch (groupPin.whichType()) {
+    switch (vgp.pin.whichType()) {
       case Group_Pin_Type.button:
         return GetBuilder<PlanetController>(
           init: controller,
-          filter: controller.aliveFilter(index),
+          filter: controller.aliveFilter(vgp),
           builder: (_) {
             return PinButton(
-              groupPin: groupPin,
-              onTrigger: controller.onTriggerButton(index),
-              enabled: controller.isInstanceAlive(index),
+              groupPin: vgp.pin,
+              onTrigger: controller.onTriggerButton(vgp),
+              enabled: controller.isInstanceAlive(vgp),
             );
           },
         );
       case Group_Pin_Type.switch_21:
-        final detect = groupPin.getDetectPin(transport);
+        final detect = vgp.getDetectPin(transport);
         return GetBuilder<PlanetController>(
           init: controller,
-          filter: controller.detectOrAliveFilter(index, pin, detect),
+          filter: controller.detectOrAliveFilter(vgp, pin, detect),
           builder: (_) {
             return PinSwitch(
               transport: transport,
-              groupPin: groupPin,
+              groupPin: vgp.pin,
               pin: pin,
               detect: detect,
-              onTrigger: controller.onTriggerSwitch(index, groupPin),
-              enabled: controller.isInstanceAlive(index),
+              onTrigger: controller.onTriggerSwitch(vgp, pin),
+              enabled: controller.isInstanceAlive(vgp),
             );
           },
         );
       case Group_Pin_Type.numberWriter:
         return GetBuilder<PlanetController>(
           init: controller,
-          filter: controller.aliveFilter(index),
+          filter: controller.aliveFilter(vgp),
           builder: (_) {
             return PinNumberWriter(
-              groupPin: groupPin,
+              groupPin: vgp.pin,
               pin: pin,
-              onTrigger: controller.onTriggerNumberWriter(index),
-              enabled: controller.isInstanceAlive(index),
+              onTrigger: controller.onTriggerNumberWriter(vgp, pin),
+              enabled: controller.isInstanceAlive(vgp),
             );
           },
         );
       case Group_Pin_Type.digitalReader:
         return GetBuilder<PlanetController>(
           init: controller,
-          filter: controller.aliveFilter(index),
+          filter: controller.aliveFilter(vgp),
           builder: (_) {
             return PinDigitalReader(
-              groupPin: groupPin,
+              groupPin: vgp.pin,
               pin: pin,
-              enabled: controller.isInstanceAlive(index),
+              enabled: controller.isInstanceAlive(vgp),
             );
           },
         );
       case Group_Pin_Type.numberReader:
         return GetBuilder<PlanetController>(
           init: controller,
-          filter: controller.aliveFilter(index),
+          filter: controller.aliveFilter(vgp),
           builder: (_) {
             return PinNumberReader(
-              groupPin: groupPin,
+              groupPin: vgp.pin,
               pin: pin,
-              enabled: controller.isInstanceAlive(index),
+              enabled: controller.isInstanceAlive(vgp),
             );
           },
         );
       case Group_Pin_Type.hide:
-        log('${groupPin.nick} error: hidden pins should not be handled');
-        return PinError(groupPin: groupPin);
+        log('${vgp.pin.nick} error: hidden pins should not be handled');
+        return PinError(groupPin: vgp.pin);
       case Group_Pin_Type.notSet:
-        log('${groupPin.nick} bugs: type must be set');
-        return PinError(groupPin: groupPin);
+        log('${vgp.pin.nick} bugs: type must be set');
+        return PinError(groupPin: vgp.pin);
     }
   }
 }

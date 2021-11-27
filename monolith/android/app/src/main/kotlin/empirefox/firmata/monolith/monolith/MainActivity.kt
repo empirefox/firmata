@@ -1,4 +1,4 @@
-package empirefox.firmata.monolith
+package empirefox.firmata.monolith.monolith
 
 import io.flutter.embedding.android.FlutterActivity
 

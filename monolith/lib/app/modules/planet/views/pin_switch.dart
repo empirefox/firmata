@@ -43,7 +43,7 @@ class _PinSwitchState extends State<PinSwitch> {
           ? (newValue) {
               widget.onTrigger.call(type.triggerMs).then(
                 (_) {
-                  if (detect == null) setState(() => pin.value ^= 1);
+                  if (detect == null) setState(() {});
                 },
                 onError: (err) =>
                     Get.snackbar('${groupPin.nick} error', '$err'),

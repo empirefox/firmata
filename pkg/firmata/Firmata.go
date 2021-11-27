@@ -113,19 +113,18 @@ func (f *Firmata) Handshake(ctx context.Context) (err error) {
 }
 
 func (f *Firmata) WaitLoop(fn func() error) (err error) {
-	var mu sync.Mutex
-	mu.Lock()
-	defer mu.Unlock()
+	var wg sync.WaitGroup
+	wg.Add(1)
 
 	err1 := f.Loop(func() {
-		defer mu.Unlock()
+		defer wg.Done()
 		err = fn()
 	})
 	if err1 != nil {
 		return err1
 	}
 
-	mu.Lock()
+	wg.Wait()
 	return err
 }
 

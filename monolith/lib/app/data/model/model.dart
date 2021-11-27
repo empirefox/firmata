@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:grpc/service_api.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:monolith/app/share/ext.dart';
 import 'package:monolith/app/share/utils.dart';
@@ -11,7 +12,7 @@ part 'model.g.dart';
 /// flutter pub run build_runner build --delete-conflicting-outputs
 @Entity()
 @JsonSerializable()
-class PlanetConfig implements ArgToParamer {
+class PlanetConfig implements ArgToParamer, ClientInterceptor {
   @Transient()
   static final defaultValue = PlanetConfig();
 
@@ -69,4 +70,24 @@ class PlanetConfig implements ArgToParamer {
 
   @override
   String argToParam() => id.toString();
+
+  @override
+  ResponseStream<R> interceptStreaming<Q, R>(
+      ClientMethod<Q, R> method,
+      Stream<Q> requests,
+      CallOptions options,
+      ClientStreamingInvoker<Q, R> invoker) {
+    return invoker(method, requests, options);
+  }
+
+  @override
+  ResponseFuture<R> interceptUnary<Q, R>(ClientMethod<Q, R> method, Q request,
+      CallOptions options, ClientUnaryInvoker<Q, R> invoker) {
+    if (callTimeoutSeconds != 0) {
+      options = options.mergedWith(
+        CallOptions(timeout: Duration(seconds: callTimeoutSeconds)),
+      );
+    }
+    return invoker(method, request, options);
+  }
 }

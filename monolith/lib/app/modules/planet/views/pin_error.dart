@@ -8,7 +8,8 @@ class PinError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      title: Text('${groupPin.nick}(error)'),
+      title: Text(
+          '${groupPin.nick}[${groupPin.firmataIndex}:${groupPin.dx}:${groupPin.ax}:${groupPin.gpioName}](error)'),
       subtitle: Text(groupPin.desc),
       trailing: const Icon(Icons.block, color: Colors.yellow),
       enabled: false,

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart' show Get, Inst;
 import 'package:grpc/grpc.dart';
@@ -84,7 +85,7 @@ class Transport {
 
   late final Config config;
   late final Config originalConfig;
-  final List<List<Group_Pin>> groupVisiblePins = [];
+  late final List<List<VisibleGroupPin>> visibleGroupPins;
   final Map<int, List<_Pair<Group_Pin>>> _groupPinPairsByFirmata = {};
   final Map<int, List<_Pair<Group_DigitalInputPin>>> _detectPinPairsByFirmata =
       {};
@@ -119,7 +120,14 @@ class Transport {
         interceptors: interceptors,
         onAboutToClose: onAboutToClose,
         onClosed: onClosed);
-    await t._init();
+    try {
+      await t._init();
+    } catch (e, stacktrace) {
+      if (kDebugMode) {
+        print(stacktrace);
+      }
+      rethrow;
+    }
     return t;
   }
 
@@ -160,15 +168,12 @@ class Transport {
     _client = TransportClient(
       _channel,
       options: CallOptions(
-        timeout: Duration(
-          seconds: planetConfig.callTimeoutSeconds,
-        ),
         providers: [
           // TODO with github.com/grpc-ecosystem/go-grpc-middleware/auth?
           authenticate(planetConfig),
         ],
       ),
-      interceptors: interceptors,
+      interceptors: [planetConfig, ...?interceptors],
     );
   }
 
@@ -252,6 +257,7 @@ class Transport {
     final oGroups = originalConfig.groups;
     final tGroups = config.groups;
     final totalGroups = oGroups.length;
+    visibleGroupPins = List.filled(totalGroups, const []);
     for (var i = 0; i < totalGroups; i++) {
       final oPins = oGroups[i].pins;
       final tPins = tGroups[i].pins;
@@ -273,7 +279,7 @@ class Transport {
               .add(_Pair(o, t));
         }
       }
-      groupVisiblePins[i] = tGroups[i].visiblePins;
+      visibleGroupPins[i] = tGroups[i].getVisiblePins(i);
     }
   }
 
@@ -329,7 +335,7 @@ class Transport {
       dxByName[pin.name] = dx;
       if (pin.ax != 127) dxByAx[pin.ax] = dx;
     }
-    _wirePinsPairsByFirmata.remove(inst.firmata)?.forEach((pair) {
+    _wirePinsPairsByFirmata.remove(inst.firmataIndex)?.forEach((pair) {
       switch (pair.o.whichFirst()) {
         case Wiring_FirmataPins_First.gpioName:
           pair.t.dx = dxByName[pair.o.gpioName] ?? -1;
@@ -357,7 +363,7 @@ class Transport {
       }
     });
 
-    _groupPinPairsByFirmata.remove(inst.firmata)?.forEach((pair) {
+    _groupPinPairsByFirmata.remove(inst.firmataIndex)?.forEach((pair) {
       switch (pair.o.whichId()) {
         case Group_Pin_Id.gpioName:
           pair.t.dx = dxByName[pair.o.gpioName] ?? -1;
@@ -372,7 +378,7 @@ class Transport {
       }
     });
 
-    _detectPinPairsByFirmata.remove(inst.firmata)?.forEach((pair) {
+    _detectPinPairsByFirmata.remove(inst.firmataIndex)?.forEach((pair) {
       switch (pair.o.whichId()) {
         case Group_DigitalInputPin_Id.gpioName:
           pair.t.dx = dxByName[pair.o.gpioName] ?? -1;
@@ -442,14 +448,19 @@ class Transport {
   Future<void> preCall() => EasyLoading.show(status: 'sending...');
   Future<void> postCall() => EasyLoading.dismiss();
 
+  // TODO add broadcast to all planets?
   Future<void> setPinMode(
-      {required int firmata, required int dx, required Mode mode}) {
+      {required Instance_Pin pin,
+      required int firmata,
+      required int dx,
+      required Mode mode}) {
     preCall();
     return _client
         .setPinMode(SetPinModeRequest.create()
           ..firmata = firmata
           ..dx = dx
           ..mode = mode)
+        .then((_) => pin.mode = mode)
         .whenComplete(postCall);
   }
 
@@ -465,13 +476,17 @@ class Transport {
   }
 
   Future<void> setPinValue(
-      {required int group, required int gpin, required int value}) {
+      {required Instance_Pin pin,
+      required int group,
+      required int gpin,
+      required int value}) {
     preCall();
     return _client
         .setPinValue(SetPinValueRequest.create()
           ..group = group
           ..gpin = gpin
           ..value = value)
+        .then((_) => pin.value = value)
         .whenComplete(() => EasyLoading.dismiss());
   }
 
@@ -516,14 +531,29 @@ class Transport {
   }
 }
 
+class VisibleGroupPin {
+  final int group;
+  final int gpin;
+  final Group_Pin pin;
+  const VisibleGroupPin(this.group, this.gpin, this.pin);
+
+  Instance_Pin? getPin(Transport t) => pin.getPin(t);
+
+  Instance_Pin? getDetectPin(Transport t) => pin.getDetectPin(t);
+}
+
 extension TransportGroupExt on Group {
-  bool isNotVisible(Group_Pin pin) {
+  bool isVisible(Group_Pin pin) {
     final type = pin.whichType();
-    return type == Group_Pin_Type.notSet ||
-        (type == Group_Pin_Type.hide && pin.hide);
+    return type != Group_Pin_Type.notSet && !pin.hide;
   }
 
-  List<Group_Pin> get visiblePins => pins.skipWhile(isNotVisible).toList();
+  List<VisibleGroupPin> getVisiblePins(int groupIndex) {
+    return [
+      for (var i = 0; i < pins.length; i++)
+        if (isVisible(pins[i])) VisibleGroupPin(groupIndex, i, pins[i]),
+    ];
+  }
 }
 
 extension TransportGroupPinExt on Group_Pin {

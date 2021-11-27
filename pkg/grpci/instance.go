@@ -24,17 +24,22 @@ func (inst *Instance) Data() *FirmataData {
 	return inst.firmata.Config.Data.(*FirmataData)
 }
 
+func (inst *Instance) ToPb_l() (out *pb.Instance) {
+	f := inst.firmata
+	return &pb.Instance{
+		Firmata:          inst.config.Name,
+		FirmataIndex:     inst.index,
+		ProtocolVersion:  f.ProtocolVersion,
+		FirmwareVersion:  f.FirmwareVersion,
+		Pins:             f.PinsToPb_l(),
+		PortConfigInputs: f.PortConfigInputs_l[:f.TotalPorts],
+	}
+}
+
 func (inst *Instance) ToPb() (out *pb.Instance, err error) {
 	f := inst.firmata
 	err = f.WaitLoop(func() error {
-		out = &pb.Instance{
-			Firmata:          inst.config.Name,
-			FirmataIndex:     inst.index,
-			ProtocolVersion:  f.ProtocolVersion,
-			FirmwareVersion:  f.FirmwareVersion,
-			Pins:             f.PinsToPb_l(),
-			PortConfigInputs: f.PortConfigInputs_l[:f.TotalPorts],
-		}
+		out = inst.ToPb_l()
 		return nil
 	})
 	return

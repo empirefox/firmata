@@ -13,6 +13,11 @@ print:
 generate:
 	go generate ./...
 
+protobuf-install-plugin:
+	@dart pub global activate protoc_plugin
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
+
 protobuf:
 	@mkdir -p ${dart_out}
 	@protoc --experimental_allow_proto3_optional \
