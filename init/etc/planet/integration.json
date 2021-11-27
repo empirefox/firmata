@@ -11,7 +11,7 @@
                     "name":"OE",
                     "from": {
                         "name": "3v3-5v OE",
-                        "gpioName": "PB0"
+                        "gpioName": "PA12"
                     },
                     "to": {
                         "device": {
@@ -27,15 +27,15 @@
                     "from": {
                         "name": "analog-pins",
                         "desc": "signal pins",
-                        "gpioName": "PA0",
-                        "lastGpioName": "PA7"
+                        "gpioName": "PB9",
+                        "lastGpioName": "PA15"
                     },
                     "to": {
                         "device": {
                             "name": "3v3-5v",
                             "desc": "VCCA",
-                            "first": "A1",
-                            "last": "A8"
+                            "first": "A8",
+                            "last": "A1"
                         }
                     }
                 }
