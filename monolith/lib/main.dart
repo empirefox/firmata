@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import 'package:monolith/app/share/ext.dart';
-import 'package:package_info/package_info.dart';
-
+import 'package:package_info_plus/package_info_plus.dart';
 import 'app/data/services/storage.service.dart';
 import 'app/data/services/transport.service.dart';
 import 'app/routes/app_pages.dart';
