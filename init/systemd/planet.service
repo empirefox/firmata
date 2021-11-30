@@ -1,0 +1,10 @@
+[Unit]
+Description=Planet - Connect to modified firmata boards
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/planet -s /var/planet/ -e /etc/planet/
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

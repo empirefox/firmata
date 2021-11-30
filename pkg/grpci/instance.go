@@ -2,6 +2,7 @@ package grpci
 
 import (
 	"context"
+	"time"
 
 	"github.com/empirefox/firmata/pkg/firmata"
 	"github.com/empirefox/firmata/pkg/pb"
@@ -17,6 +18,8 @@ type Instance struct {
 }
 
 func (inst *Instance) Handshake(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
 	return inst.firmata.Handshake(ctx)
 }
 

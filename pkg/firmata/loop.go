@@ -1,12 +1,15 @@
 package firmata
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
 )
 
 var (
+	bootingPrefix = []byte("Booting")
+
 	ErrClosed = errors.New("Firmata closed")
 )
 
@@ -219,8 +222,12 @@ func (f *Firmata) proccessFrame(frame *ReadFrame) (err error) {
 				f.Config.OnI2cReply(f, frame.Data.(*I2cReply))
 			}
 		case STRING_DATA:
+			b := frame.Data.([]byte)
 			if f.Config.OnStringData != nil {
-				f.Config.OnStringData(f, frame.Data.([]byte))
+				f.Config.OnStringData(f, b)
+			}
+			if !f.handshaking_l && bytes.HasPrefix(b, bootingPrefix) {
+				f.Close()
 			}
 		case START_SYSEX:
 			if f.Config.OnSysexResponse != nil {

@@ -82,7 +82,7 @@ func CheckError(boards []*pb.Board, integration *pb.Integration, config *pb.Conf
 
 	for i, t := range integration.Firmatas {
 		if t.ConnectRetrySecond == 0 {
-			t.ConnectRetrySecond = 1
+			t.ConnectRetrySecond = 10
 		}
 		for _, w := range t.Wiring {
 			w.From.FirmataIndex = uint32(i)
