@@ -13,7 +13,7 @@ class PlanetsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    planets = _ss.planet.getAll();
+    planets = _ss.getAllPlanet();
   }
 
   @override
@@ -43,7 +43,7 @@ class PlanetsController extends GetxController {
   }
 
   void delete(PlanetConfig planet) {
-    _ss.planet.remove(planet.id);
+    _ss.removePlanet(planet.id);
     planets.remove(planet);
     update(['planets']);
   }

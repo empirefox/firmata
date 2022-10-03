@@ -181,14 +181,11 @@ class Transport {
     if (config.tokenType == 'none') {
       return (Map<String, String> metadata, String uri) async {};
     }
-    final boxes = Get.find<StorageService>();
-    final q = boxes.planet.query(PlanetConfig_.id.equals(config.id)).build()
-      ..limit = 1;
     return (Map<String, String> metadata, String uri) async {
-      final r = q.property(PlanetConfig_.token).find();
-      config.token = r.isNotEmpty ? r.first : '';
-      if (config.token.isNotEmpty) {
-        metadata['authorization'] = '${config.tokenType} ${config.token}';
+      final ss = Get.find<StorageService>();
+      final c = ss.getPlanet(config.id) ?? PlanetConfig();
+      if (c.token.isNotEmpty) {
+        metadata['authorization'] = '${c.tokenType} ${c.token}';
       }
     };
   }

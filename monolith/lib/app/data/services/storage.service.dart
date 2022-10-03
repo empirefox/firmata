@@ -5,12 +5,13 @@ import 'package:monolith/app/share/utils.dart';
 import 'package:monolith/objectbox.g.dart';
 
 class StorageService extends GetxService {
-  final Store store;
-  final Box<PlanetConfig> planet;
+  final Store _store;
+  final Box<PlanetConfig> _planet;
   StorageService({
-    required this.store,
-    required this.planet,
-  });
+    required Store store,
+    required Box<PlanetConfig> planet,
+  })  : _store = store,
+        _planet = planet;
 
   static Future<StorageService> create() {
     return openStore().then((store) => StorageService(
@@ -21,7 +22,19 @@ class StorageService extends GetxService {
 
   PlanetConfig? getPlanet(int id) {
     if (id == 0) return null;
-    return planet.get(id);
+    return _planet.get(id);
+  }
+
+  List<PlanetConfig> getAllPlanet() {
+    return _planet.getAll();
+  }
+
+  Future<int> setPlanet(PlanetConfig p) {
+    return _planet.putAsync(p);
+  }
+
+  bool removePlanet(int id) {
+    return _planet.remove(id);
   }
 
   PlanetConfig? getxPlanetOrFromId(int? id) =>

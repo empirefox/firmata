@@ -4,106 +4,106 @@
   "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
   "entities": [
     {
-      "id": "1:1805767860837116387",
-      "lastPropertyId": "17:353780544430825407",
+      "id": "1:7471850927689559099",
+      "lastPropertyId": "17:1575634759686454391",
       "name": "PlanetConfig",
       "properties": [
         {
-          "id": "1:8716920390040972319",
+          "id": "1:5131503550490081415",
           "name": "id",
           "type": 6,
           "flags": 1
         },
         {
-          "id": "2:7482917749088793058",
+          "id": "2:669955921660927315",
+          "name": "name",
+          "type": 9,
+          "flags": 8,
+          "indexId": "1:6718325284318396227"
+        },
+        {
+          "id": "3:7077091171197706383",
           "name": "host",
           "type": 9,
           "flags": 8,
-          "indexId": "1:2107452570768017366"
+          "indexId": "2:3259994931266388774"
         },
         {
-          "id": "3:2426987980804787143",
+          "id": "4:7087126995699993949",
           "name": "port",
           "type": 6
         },
         {
-          "id": "4:7225477653748570355",
+          "id": "5:5036227541285361447",
           "name": "isTlsDisabled",
           "type": 1
         },
         {
-          "id": "5:2726781555754951935",
+          "id": "6:6506597790273805101",
           "name": "tlsCertificates",
           "type": 9
         },
         {
-          "id": "6:7170053109147695150",
+          "id": "7:4764859813720108938",
           "name": "tlsPassword",
           "type": 9
         },
         {
-          "id": "7:5504466940914669724",
+          "id": "8:3762567758477126536",
           "name": "tlsAuthority",
           "type": 9
         },
         {
-          "id": "8:6343574444764212035",
+          "id": "9:2533118628429734581",
           "name": "canTlsInsecureSkipVerify",
           "type": 1
         },
         {
-          "id": "9:2966628739510245268",
+          "id": "10:8246367792433789283",
           "name": "supportGrpcCodecGzip",
           "type": 1
         },
         {
-          "id": "10:3348576473233977047",
+          "id": "11:7118122196886135453",
           "name": "supportGrpcCodecIdentity",
           "type": 1
         },
         {
-          "id": "11:4027799160716403994",
+          "id": "12:2142510218621902179",
           "name": "tokenType",
           "type": 9
         },
         {
-          "id": "12:1487743362831840029",
+          "id": "13:111271551700743516",
           "name": "token",
           "type": 9
         },
         {
-          "id": "13:2422674049177453486",
+          "id": "14:8159711644828368776",
           "name": "connectionTimeoutSeconds",
           "type": 6
         },
         {
-          "id": "14:6610236115263440678",
+          "id": "15:7186790108735652957",
           "name": "idleTimeoutSeconds",
           "type": 6
         },
         {
-          "id": "15:8684583559588657775",
+          "id": "16:7485197353321461136",
           "name": "callTimeoutSeconds",
           "type": 6
         },
         {
-          "id": "16:4055613718378871334",
+          "id": "17:1575634759686454391",
           "name": "userAgent",
           "type": 9
-        },
-        {
-          "id": "17:353780544430825407",
-          "name": "name",
-          "type": 9,
-          "flags": 8,
-          "indexId": "2:8215502407070784198"
         }
       ],
       "relations": []
     }
   ],
-  "lastEntityId": "1:1805767860837116387",
-  "lastIndexId": "2:8215502407070784198",
+  "lastEntityId": "1:7471850927689559099",
+  "lastIndexId": "2:3259994931266388774",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

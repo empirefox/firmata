@@ -120,7 +120,7 @@ class PlanetEditController extends GetxController {
 
   void onSubmit() async {
     final n = PlanetConfig.fromJson(form.value);
-    final id = await _ss.planet.putAsync(n);
+    final id = await _ss.setPlanet(n);
     await _ts.shutdown(id);
     Get.back(result: n, closeOverlays: true);
   }

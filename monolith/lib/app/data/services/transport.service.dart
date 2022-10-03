@@ -21,7 +21,7 @@ class TransportService extends GetxService {
     if (id == null) return null;
     var t = _transports[id];
     if (t == null) {
-      final config = _ss.planet.get(id);
+      final config = _ss.getPlanet(id);
       if (config == null) {
         return null;
       }

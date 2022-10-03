@@ -23,8 +23,7 @@ class PlanetView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final future = controller.future;
-    if (future == null) {
+    if (controller.future == null) {
       return Center(
         child: Column(
           children: [
@@ -35,7 +34,7 @@ class PlanetView extends StatelessWidget {
       );
     }
     return FutureBuilder(
-      future: future,
+      future: controller.future,
       builder: (BuildContext context, AsyncSnapshot<Transport> snapshot) {
         final title = controller.config.viewName(snapshot.data?.config.nick);
         return Scaffold(

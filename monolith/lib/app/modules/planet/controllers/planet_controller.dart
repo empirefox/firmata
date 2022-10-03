@@ -20,7 +20,6 @@ class PlanetController extends GetxController with WidgetsBindingObserver {
   final _ts = Get.find<TransportService>();
 
   Future<Transport>? _future;
-  bool _futureDone = false;
 
   // requires future
   late final PlanetConfig config;
@@ -71,9 +70,7 @@ class PlanetController extends GetxController with WidgetsBindingObserver {
 
   // future must not be null to proccess.
   Future<Transport>? get future {
-    if (_future == null && !_futureDone) {
-      _futureDone = true;
-
+    if (_future == null) {
       PlanetConfig? config = _ss.getxPlanet();
       if (config == null) {
         return null;

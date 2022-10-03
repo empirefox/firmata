@@ -16,20 +16,20 @@ generate:
 protobuf-install-plugin:
 	@dart pub global activate protoc_plugin
 	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
+	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 protobuf:
 	@mkdir -p ${dart_out}
-	@protoc --experimental_allow_proto3_optional \
+	@protoc \
 		--proto_path=$(CURDIR) \
 		--go_out=paths=import,module=${module}:$(CURDIR) \
 		--dart_out=grpc:${dart_out} \
 		${protos_path}/*.proto
-	@protoc --experimental_allow_proto3_optional \
+	@protoc \
 		--proto_path=$(CURDIR) \
 		--go-grpc_out=paths=import,module=${module}:$(CURDIR) \
 		${protos_path}/transport.proto
-	@protoc --experimental_allow_proto3_optional \
+	@protoc \
 		--proto_path=${protoc_include} \
 		--dart_out=:${dart_out} \
 		${protoc_include}/google/protobuf/empty.proto \
@@ -45,15 +45,15 @@ dart-pub-get:
 	@cd monolith && flutter pub get
 
 jsonschema:
-	@protoc --experimental_allow_proto3_optional \
+	@protoc \
 		--proto_path=$(CURDIR) \
 		--jsonschema_out=init/var/planet/schema \
 		${protos_path}/board.proto
-	@protoc --experimental_allow_proto3_optional \
+	@protoc \
 		--proto_path=$(CURDIR) \
 		--jsonschema_out=init/etc/planet/schema \
 		${protos_path}/integration.proto
-	@protoc --experimental_allow_proto3_optional \
+	@protoc \
 		--proto_path=$(CURDIR) \
 		--jsonschema_out=init/etc/planet/schema \
 		${protos_path}/config.proto
